@@ -93,3 +93,42 @@ func TestStateDirUnavailable(t *testing.T) {
 		}
 	}
 }
+
+func TestResolveTables(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`
+[plugins.short]
+value = "selected"
+
+[plugins.extra]
+value = "ignored"
+`)
+	tables, err := config.ResolveTables(data, []config.PluginReference{{ID: "github.com/example/plugin", Name: "short"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := config.Decode[struct {
+		Value string `toml:"value"`
+	}](tables["github.com/example/plugin"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Value != "selected" {
+		t.Fatalf("unexpected value %q", decoded.Value)
+	}
+}
+
+func TestResolveTablesRequiresExactlyOneReferenceKey(t *testing.T) {
+	t.Parallel()
+
+	reference := []config.PluginReference{{ID: "github.com/example/plugin", Name: "short"}}
+	_, err := config.ResolveTables([]byte("[plugins.extra]\n"), reference)
+	if !errors.Is(err, config.ErrMissingPluginConfig) {
+		t.Fatalf("expected missing config error, got %v", err)
+	}
+	_, err = config.ResolveTables([]byte("[plugins.short]\n[plugins.\"github.com/example/plugin\"]\n"), reference)
+	if !errors.Is(err, config.ErrDuplicatePluginConfig) {
+		t.Fatalf("expected duplicate config error, got %v", err)
+	}
+}
