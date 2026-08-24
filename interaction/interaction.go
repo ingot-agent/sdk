@@ -17,12 +17,23 @@ type Channel interface {
 	Render(context.Context, Event) error
 }
 
-// AskRequest requests structured text input.
-type AskRequest struct {
-	Prompt string
+// AskOption describes one ordered choice presented by an interaction frontend.
+// Label is the value returned in AskResponse.Text when the option is selected.
+type AskOption struct {
+	Label       string
+	Description string
 }
 
-// AskResponse contains structured text input.
+// AskRequest requests synchronous user input. When Options is non-empty, the
+// frontend presents them in order. AllowTextInput requires an additional
+// free-form choice; selecting it returns the user's original text.
+type AskRequest struct {
+	Prompt         string
+	Options        []AskOption
+	AllowTextInput bool
+}
+
+// AskResponse contains either the selected option label or free-form input.
 type AskResponse struct {
 	Text string
 }

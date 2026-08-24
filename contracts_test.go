@@ -123,6 +123,15 @@ func (channel) Render(context.Context, interaction.Event) error  { return nil }
 
 var _ interaction.Channel = channel{}
 
+var _ = interaction.AskRequest{
+	Prompt: "Continue?",
+	Options: []interaction.AskOption{
+		{Label: "Yes", Description: "Continue the operation."},
+		{Label: "No", Description: "Stop the operation."},
+	},
+	AllowTextInput: true,
+}
+
 var (
 	_ interaction.Event = interaction.TextEvent{}
 	_ interaction.Event = interaction.StatusEvent{}
