@@ -26,6 +26,9 @@ The packages follow the SDK v0.1 design:
 - Errors use ordinary Go chains, preserving context and package sentinel errors
   through `errors.Is`.
 - `pipeline.Compose` treats the first interceptor as the outermost interceptor.
+- `interaction.AskRequest` may carry ordered options. When `AllowTextInput` is
+  true, the frontend also presents a free-form choice; `AskResponse.Text`
+  contains either the selected label or the original custom text.
 
 The module requires Go 1.24 or newer because the public API uses generic type
 aliases as specified by the design.
