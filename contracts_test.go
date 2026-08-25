@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/ingot-agent/sdk/agent"
+	"github.com/ingot-agent/sdk/contextwindow"
 	"github.com/ingot-agent/sdk/filesystem"
 	"github.com/ingot-agent/sdk/httpx"
 	"github.com/ingot-agent/sdk/interaction"
@@ -112,6 +113,30 @@ func (renderer) Render(context.Context, prompt.Request) ([]model.Message, error)
 }
 
 var _ prompt.Renderer = renderer{}
+
+type compactor struct{}
+
+func (compactor) Compact(
+	context.Context,
+	contextwindow.CompactionRequest,
+) (contextwindow.CompactionResult, error) {
+	return contextwindow.CompactionResult{}, nil
+}
+
+var _ contextwindow.Compactor = compactor{}
+
+var _ = contextwindow.CompactionRequest{
+	SessionID: "session-1",
+	Invocation: model.Request{
+		Provider: "provider",
+		Model:    "model",
+	},
+}
+
+var _ = contextwindow.CompactionResult{
+	Messages: []model.Message{{Role: model.RoleUser, Content: "hello"}},
+	Changed:  true,
+}
 
 type channel struct{}
 
