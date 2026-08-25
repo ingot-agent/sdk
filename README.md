@@ -11,8 +11,8 @@ The packages follow the SDK v0.1 design:
 - `config`: strict plugin TOML decoding and plugin-scoped state directories;
 - `pipeline`: generic typed interceptor composition;
 - `httpx` and `filesystem`: shared infrastructure capabilities;
-- `tool`, `model`, `session`, `prompt`, `interaction`, and `agent`: domain
-  contracts and runtime chokepoints.
+- `tool`, `model`, `session`, `prompt`, `contextwindow`, `interaction`, and
+  `agent`: domain contracts and runtime chokepoints.
 
 ## Contract rules
 
@@ -29,6 +29,10 @@ The packages follow the SDK v0.1 design:
 - `interaction.AskRequest` may carry ordered options. When `AllowTextInput` is
   true, the frontend also presents a free-form choice; `AskResponse.Text`
   contains either the selected label or the original custom text.
+- `contextwindow.Compactor` receives an immutable model invocation and returns
+  a complete caller-owned message sequence. Implementations may keep
+  session-scoped compaction state, but the SDK does not prescribe a summary,
+  checkpoint, or token-counting strategy.
 
 The module requires Go 1.24 or newer because the public API uses generic type
 aliases as specified by the design.
