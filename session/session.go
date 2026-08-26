@@ -49,5 +49,14 @@ type Store interface {
 	List(context.Context, Query) ([]Summary, error)
 }
 
+// MutableStore extends Store with mutable session metadata. Rename changes
+// only the display title: it does not change the session identity, entry
+// sequence, CreatedAt, or UpdatedAt. Rename calls for one session are ordered
+// with that session's Append and Load operations.
+type MutableStore interface {
+	Store
+	Rename(context.Context, ID, string) error
+}
+
 // ErrNotFound indicates that a session does not exist.
 var ErrNotFound = errors.New("session not found")

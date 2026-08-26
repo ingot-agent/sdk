@@ -95,8 +95,12 @@ func (store) Load(context.Context, session.ID) ([]session.Entry, error)    { ret
 func (store) List(context.Context, session.Query) ([]session.Summary, error) {
 	return nil, nil
 }
+func (store) Rename(context.Context, session.ID, string) error { return nil }
 
-var _ session.Store = store{}
+var (
+	_ session.Store        = store{}
+	_ session.MutableStore = store{}
+)
 
 type contributor struct{}
 

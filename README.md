@@ -37,6 +37,9 @@ The packages follow the SDK v0.1 design:
   a complete caller-owned message sequence. Implementations may keep
   session-scoped compaction state, but the SDK does not prescribe a summary,
   checkpoint, or token-counting strategy.
+- `session.MutableStore` (added in v0.1.3) extends append-oriented persistence
+  with title-only metadata updates. Renaming does not change session identity,
+  conversation ordering, or conversation timestamps.
 - `agent.History` exposes a validated, caller-owned snapshot of persisted model
   messages without making frontends understand an Agent implementation's
   private session payload format.
