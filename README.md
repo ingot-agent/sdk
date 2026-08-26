@@ -12,7 +12,9 @@ The packages follow the SDK v0.1 design:
 - `pipeline`: generic typed interceptor composition;
 - `httpx` and `filesystem`: shared infrastructure capabilities;
 - `tool`, `model`, `session`, `prompt`, `contextwindow`, `interaction`, and
-  `agent`: domain contracts and runtime chokepoints.
+  `agent`: domain contracts and runtime chokepoints;
+- `application`: immutable process invocation metadata and controlled,
+  cleanup-preserving shutdown requests for interactive frontends.
 
 ## Contract rules
 
@@ -35,6 +37,13 @@ The packages follow the SDK v0.1 design:
   a complete caller-owned message sequence. Implementations may keep
   session-scoped compaction state, but the SDK does not prescribe a summary,
   checkpoint, or token-counting strategy.
+- `agent.History` exposes a validated, caller-owned snapshot of persisted model
+  messages without making frontends understand an Agent implementation's
+  private session payload format.
+- `application.Process` is supplied through Context by the generated runtime.
+  Frontends use it to inspect arguments/check mode and request normal or fatal
+  shutdown; the generated runtime remains responsible for cancellation and
+  reverse cleanup.
 
 The module requires Go 1.24 or newer because the public API uses generic type
 aliases as specified by the design.
