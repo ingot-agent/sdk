@@ -4,6 +4,7 @@ package agent
 import (
 	"context"
 
+	"github.com/ingot-agent/sdk/model"
 	"github.com/ingot-agent/sdk/pipeline"
 	"github.com/ingot-agent/sdk/session"
 )
@@ -23,6 +24,14 @@ type Result struct {
 // parallel; turns for one session are serialized in call order.
 type Runtime interface {
 	Run(context.Context, Turn) (Result, error)
+}
+
+// History loads the validated, persisted model messages for one session.
+// Loads for the same session are serialized with Runtime.Run; different
+// sessions may be loaded concurrently. The returned aggregate and all nested
+// mutable values are owned by the caller.
+type History interface {
+	Load(context.Context, session.ID) ([]model.Message, error)
 }
 
 // Interceptor wraps an agent turn.
