@@ -143,8 +143,7 @@ type channel struct{}
 func (channel) Ask(context.Context, interaction.AskRequest) (interaction.AskResponse, error) {
 	return interaction.AskResponse{}, nil
 }
-func (channel) ReadLine(context.Context, string) (string, error) { return "", nil }
-func (channel) Render(context.Context, interaction.Event) error  { return nil }
+func (channel) Render(context.Context, interaction.Event) error { return nil }
 
 var _ interaction.Channel = channel{}
 

@@ -9,11 +9,10 @@ import (
 )
 
 // Channel provides synchronous user interaction and event rendering.
-// Render is concurrent-safe. Ask and ReadLine are serialized with each other
+// Render is concurrent-safe. Ask operations are serialized with each other
 // and observe context cancellation while waiting for serialization or input.
 type Channel interface {
 	Ask(context.Context, AskRequest) (AskResponse, error)
-	ReadLine(context.Context, string) (string, error)
 	Render(context.Context, Event) error
 }
 
@@ -25,8 +24,10 @@ type AskOption struct {
 }
 
 // AskRequest requests synchronous user input. When Options is non-empty, the
-// frontend presents them in order. AllowTextInput requires an additional
-// free-form choice; selecting it returns the user's original text.
+// frontend presents them in order. When Options is empty the frontend asks a
+// plain free-form question; the user's input is returned as-is in
+// AskResponse.Text. AllowTextInput requires an additional free-form choice;
+// selecting it returns the user's original text.
 type AskRequest struct {
 	Prompt         string
 	Options        []AskOption
