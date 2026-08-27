@@ -11,8 +11,8 @@ The packages follow the SDK v0.1 design:
 - `config`: strict plugin TOML decoding and plugin-scoped state directories;
 - `pipeline`: generic typed interceptor composition;
 - `httpx` and `filesystem`: shared infrastructure capabilities;
-- `tool`, `model`, `usage`, `session`, `prompt`, `contextwindow`, `interaction`,
-  and `agent`: domain contracts and runtime chokepoints;
+- `tool`, `model`, `session`, `prompt`, `contextwindow`, `interaction`, and
+  `agent`: domain contracts and runtime chokepoints;
 - `application`: immutable process invocation metadata and controlled,
   cleanup-preserving shutdown requests for interactive frontends.
 
