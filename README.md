@@ -11,8 +11,8 @@ The packages follow the SDK v0.1 design:
 - `config`: strict plugin TOML decoding and plugin-scoped state directories;
 - `pipeline`: generic typed interceptor composition;
 - `httpx` and `filesystem`: shared infrastructure capabilities;
-- `tool`, `model`, `session`, `prompt`, `contextwindow`, `interaction`, and
-  `agent`: domain contracts and runtime chokepoints;
+- `tool`, `model`, `usage`, `session`, `prompt`, `contextwindow`, `interaction`,
+  and `agent`: domain contracts and runtime chokepoints;
 - `application`: immutable process invocation metadata and controlled,
   cleanup-preserving shutdown requests for interactive frontends.
 
@@ -47,6 +47,9 @@ The packages follow the SDK v0.1 design:
   Frontends use it to inspect arguments/check mode and request normal or fatal
   shutdown; the generated runtime remains responsible for cancellation and
   reverse cleanup.
+- `model.RequestResolver` materializes provider and model defaults without a
+  provider call or model interceptor execution. `usage.Counter` uses a complete
+  resolved invocation and reports the count source and accuracy explicitly.
 
 The module requires Go 1.24 or newer because the public API uses generic type
 aliases as specified by the design.

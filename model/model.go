@@ -69,6 +69,14 @@ type Runtime interface {
 	Complete(context.Context, Request) (Response, error)
 }
 
+// RequestResolver materializes the provider and model defaults for an
+// invocation without calling a provider or executing model interceptors.
+// Implementations return a caller-owned deep copy and are safe for concurrent
+// requests.
+type RequestResolver interface {
+	ResolveRequest(context.Context, Request) (Request, error)
+}
+
 // Interceptor wraps a complete model request.
 type Interceptor = pipeline.Interceptor[Request, Response]
 
