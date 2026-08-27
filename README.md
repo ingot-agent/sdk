@@ -37,6 +37,9 @@ The packages follow the SDK v0.1 design:
   a complete caller-owned message sequence. Implementations may keep
   session-scoped compaction state, but the SDK does not prescribe a summary,
   checkpoint, or token-counting strategy.
+- `session.MutableStore` (added in v0.1.3) extends append-oriented persistence
+  with title-only metadata updates. Renaming does not change session identity,
+  conversation ordering, or conversation timestamps.
 - `agent.History` exposes a validated, caller-owned snapshot of persisted model
   messages without making frontends understand an Agent implementation's
   private session payload format.
@@ -44,6 +47,9 @@ The packages follow the SDK v0.1 design:
   Frontends use it to inspect arguments/check mode and request normal or fatal
   shutdown; the generated runtime remains responsible for cancellation and
   reverse cleanup.
+- `model.RequestResolver` materializes provider and model defaults without a
+  provider call or model interceptor execution. `usage.Counter` uses a complete
+  resolved invocation and reports the count source and accuracy explicitly.
 
 The module requires Go 1.24 or newer because the public API uses generic type
 aliases as specified by the design.
