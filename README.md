@@ -28,11 +28,11 @@ The packages follow the SDK v0.1 design:
 - Errors use ordinary Go chains, preserving context and package sentinel errors
   through `errors.Is`.
 - `pipeline.Compose` treats the first interceptor as the outermost interceptor.
-- `interaction.Channel` exposes `Ask` for synchronous user input and `Render`
-  for output. `Ask` with empty `Options` is a plain free-form text question;
-  with `Options` it presents ordered choices, and `AllowTextInput` adds a
-  free-form choice. `AskResponse.Text` contains either the selected label or
-  the original custom text.
+- `interaction.Channel` is a structured plugin-to-host effect boundary:
+  `Request` obtains named values, `Emit` reports one-time facts, and
+  `Set`/`Clear` manage named current-state snapshots. Hosts may satisfy these
+  effects through a UI, CLI, policy, configuration, recorder, remote
+  controller, or another environment facility.
 - `contextwindow.Compactor` receives an immutable model invocation and returns
   a complete caller-owned message sequence. Implementations may keep
   session-scoped compaction state, but the SDK does not prescribe a summary,
