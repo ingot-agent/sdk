@@ -144,28 +144,36 @@ var _ = contextwindow.CompactionResult{
 
 type channel struct{}
 
-func (channel) Ask(context.Context, interaction.AskRequest) (interaction.AskResponse, error) {
-	return interaction.AskResponse{}, nil
+func (channel) Request(context.Context, interaction.Request) (interaction.Response, error) {
+	return interaction.Response{}, nil
 }
-func (channel) Render(context.Context, interaction.Event) error { return nil }
+func (channel) Emit(context.Context, interaction.Event) error { return nil }
+func (channel) Set(context.Context, interaction.State) error  { return nil }
+func (channel) Clear(context.Context, string) error           { return nil }
 
 var _ interaction.Channel = channel{}
 
-var _ = interaction.AskRequest{
-	Prompt: "Continue?",
-	Options: []interaction.AskOption{
-		{Label: "Yes", Description: "Continue the operation."},
-		{Label: "No", Description: "Stop the operation."},
+var _ = interaction.Request{
+	Name:        "continue",
+	Description: "Continue?",
+	Fields: []interaction.Field{
+		{
+			Name:     "decision",
+			Label:    "Decision",
+			Kind:     interaction.FieldChoice,
+			Required: true,
+			Options: []interaction.Option{
+				{Value: "yes", Label: "Yes", Description: "Continue the operation."},
+				{Value: "no", Label: "No", Description: "Stop the operation."},
+			},
+		},
 	},
-	AllowTextInput: true,
 }
 
 var (
-	_ interaction.Event = interaction.TextEvent{}
-	_ interaction.Event = interaction.StatusEvent{}
-	_ interaction.Event = interaction.ErrorEvent{}
-	_ interaction.Event = interaction.ToolCallEvent{}
-	_ interaction.Event = interaction.ToolResultEvent{}
+	_ = interaction.Event{Name: "connection_lost", Level: interaction.LevelWarning}
+	_ = interaction.State{Name: "connection", Values: []interaction.Entry{{Name: "connected", Value: interaction.BooleanValue(false)}}}
+	_ = interaction.Response{Values: []interaction.Answer{{Name: "decision", Value: interaction.StringValue("yes")}}}
 )
 
 type agentRuntime struct{}
