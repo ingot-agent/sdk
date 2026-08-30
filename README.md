@@ -3,10 +3,9 @@
 > Optional, domain-neutral Go contracts for interoperable agent plugins.
 
 `github.com/ingot-agent/sdk` is the shared public protocol library maintained
-for the ingot plugin ecosystem. It provides small composition primitives,
-general-purpose agent capability contracts, and a few contract-level helpers.
-It does not discover plugins, resolve component graphs, generate wiring, load
-plugins at runtime, or provide concrete agent implementations.
+for the ingot plugin ecosystem. It provides general-purpose agent capability
+contracts. It does not discover plugins, resolve component graphs, generate
+wiring, load plugins at runtime, or provide concrete agent implementations.
 
 Most importantly, **this SDK is useful, but it is not mandatory**. ingot is a
 build-time composition system, not a framework tied to one protocol package.
@@ -30,16 +29,10 @@ A plugin author can choose among three approaches:
 3. **Use a different SDK entirely** when the plugin ecosystem needs different
    foundational or capability contracts.
 
-An ingot build must still configure at least one SDK module that provides the
-foundational shapes expected by the Builder. A replacement SDK therefore needs
-to implement the Builder's SDK contract, including compatible composition,
-configuration, lifecycle, and process-control primitives. This requirement is
-about the shape of a configured SDK; it does not require the module path
-`github.com/ingot-agent/sdk`.
-
-Use the standard SDK when it improves interoperability. Do not force a domain
-concept into the standard SDK merely to avoid publishing another contract
-module.
+Agent capabilities are ordinary Go types. The Builder participates in the
+Component Graph purely through Go type identity: no SDK module path needs to
+be configured for this module, or for any other contract module, to be used
+by a plugin.
 
 ## Scope: general agent capabilities only
 
@@ -66,42 +59,15 @@ The following do **not** belong in this SDK:
 - customer-service ticket schemas, commerce order models, healthcare records,
   or other industry-specific data;
 - one provider's request fields, one product's policy language, or one
-  application's orchestration state.
+  application's orchestration state;
+- runtime-owned host protocols: Component ABI primitives, process control,
+  invocation metadata and plugin state scope (those live in the fixed
+  [ingot ABI](https://github.com/ingot-agent/ingot-abi)).
 
 Put a private contract next to the plugin that owns it. If several plugins in a
-domain need to interoperate, publish a separate domain SDK and configure ingot
-to build with both SDKs. Presentation-neutral semantic effects may be shared;
-the UI protocol that renders those effects should remain outside this module.
-
-## Multiple SDKs in one image
-
-ingot can resolve and type-check an ordered set of SDK modules in one build. A
-composition can therefore combine the general ingot SDK with independently
-versioned domain SDKs:
-
-```toml
-builder_config_version = 1
-
-[[sdks]]
-module = "github.com/ingot-agent/sdk"
-version = "v0.1.5"
-
-[[sdks]]
-module = "example.com/acme/support-agent-sdk"
-version = "v1.2.0"
-```
-
-The first entry is the primary SDK used by generated runtime support.
-Components may use capability types and dependency wrappers from any configured
-SDK. Every configured SDK must provide the Builder-required support packages,
-and its `Cleanup` type must be convertible to the primary SDK's `Cleanup`.
-
-This lets a customer-service ecosystem share ticket, routing, and escalation
-contracts without adding those concepts to a general agent SDK. The same model
-applies to coding, data, robotics, research, and other specialized domains.
-
-See the ingot [Builder configuration documentation](https://github.com/ingot-agent/ingot/blob/main/docs/USAGE.md#builder-sdk-configuration)
-for the complete configuration rules.
+domain need to interoperate, publish a separate domain SDK and let plugins
+import it directly. Presentation-neutral semantic effects may be shared; the UI
+protocol that renders those effects should remain outside this module.
 
 ## Packages
 
@@ -110,8 +76,6 @@ it uses.
 
 | Package | Purpose |
 |---|---|
-| `sdk` | Composition primitives: `Cleanup`, `Optional[T]`, and `Named[T]`. |
-| `config` | Strict plugin configuration decoding and plugin-scoped state directories. |
 | `pipeline` | Generic typed interceptor composition. |
 | `httpx` | A shared, context-aware HTTP client capability. |
 | `filesystem` | Safe workspace-relative filesystem access. |
@@ -123,39 +87,75 @@ it uses.
 | `usage` | Model-aware input counting with explicit accuracy. |
 | `agent` | Agent turn execution, history access, and interception. |
 | `interaction` | Presentation-neutral structured effects between plugins and a host environment. |
-| `application` | Process invocation metadata and cleanup-preserving shutdown control. |
 
 `interaction` describes semantic requests, events, and state. It deliberately
-does not define widgets, layouts, terminal behavior, or rendering. Likewise,
-`application` controls process lifetime; it is not a frontend framework.
+does not define widgets, layouts, terminal behavior, or rendering.
+
+The Component ABI (`Cleanup`, `Optional`, `Named`) and the runtime host
+contracts (invocation, lifecycle, state scope) live in the
+[ingot ABI](https://github.com/ingot-agent/ingot-abi), not in this module.
+
+## Migrating runtime contracts
+
+Runtime-facing contracts previously published by this module have moved to
+`github.com/ingot-agent/ingot-abi`:
+
+- replace imports of the root SDK package for `Cleanup`, `Optional`, and
+  `Named` with the root `ingot-abi` package;
+- split `application.Process` into explicit `ingot-abi/invocation.Invocation`
+  and `ingot-abi/lifecycle.Controller` dependencies;
+- replace `config.StateDir` context lookup with an explicit
+  `ingot-abi/state.Scope` dependency; and
+- remove calls to `config.ResolveTables` and `config.Decode`; the Builder and
+  generated Runtime Image own strict decoding and pass the component's typed
+  configuration value to its constructor.
+
+The ABI repository is fixed infrastructure shared by the Builder and generated
+Runtime Images. This SDK remains an optional collection of agent capability
+contracts.
 
 ## Using the standard SDK
 
 Requires Go 1.24 or newer.
 
 ```sh
-go get github.com/ingot-agent/sdk@v0.1.5
+go get github.com/ingot-agent/sdk@latest
+go get github.com/ingot-agent/ingot-abi@v0.1.0
 ```
 
 Capabilities are ordinary Go interfaces and values. A component declares only
 what it consumes and provides:
 
 ```go
+import (
+	"context"
+
+	ingotabi "github.com/ingot-agent/ingot-abi"
+	"github.com/ingot-agent/sdk/agent"
+	"github.com/ingot-agent/sdk/model"
+	"github.com/ingot-agent/sdk/session"
+	"github.com/ingot-agent/sdk/tool"
+)
+
+type Config struct{}
+
 type Dependencies struct {
-    Model model.Runtime
-    Tools tool.Runtime
-    Store session.Store
+	Model model.Runtime
+	Tools tool.Runtime
+	Store session.Store
 }
 
 type Exports struct {
-    Agent agent.Runtime
+	Agent agent.Runtime
 }
 
 func New(
-    ctx context.Context,
-    cfg Config,
-    deps Dependencies,
-) (Exports, sdk.Cleanup, error)
+	ctx context.Context,
+	cfg Config,
+	deps Dependencies,
+) (Exports, ingotabi.Cleanup, error) {
+	return Exports{}, nil, nil
+}
 ```
 
 There is no service locator or global registration API. The ingot Builder reads

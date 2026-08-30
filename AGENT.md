@@ -3,14 +3,15 @@
 ## Project role
 
 `github.com/ingot-agent/sdk` is an optional public contract library for the
-ingot plugin ecosystem. It provides reusable composition primitives and
-domain-neutral agent capabilities. It is not the ingot runtime, a plugin
-framework, or a mandatory dependency for plugins.
+ingot plugin ecosystem. It provides reusable, domain-neutral agent capability
+contracts. It is not the ingot runtime, a plugin framework, or a mandatory
+dependency for plugins.
 
 Encourage plugins to use these contracts when they fit because shared types
 improve interoperability. Never assume that every plugin must import this
 module: plugins may use private contracts, another SDK, or a purpose-built SDK.
-ingot supports multiple configured SDKs in one build.
+Contract modules participate in the Component Graph through ordinary Go type
+identity only; no separate module configuration exists for them.
 
 ## Scope is domain-neutral
 
@@ -26,7 +27,7 @@ different agent domains.
 - Presentation-neutral semantic effects are acceptable only when their
   contract does not prescribe how a host displays or collects them.
 - Keep private concepts in the owning plugin. Put shared domain concepts in a
-  separately versioned domain SDK that can be configured alongside this one.
+  separately versioned domain SDK that Plugins import directly.
 
 A proposal belongs here only when it has precise, implementation-independent
 semantics and more than one plausible interchangeable implementation.
