@@ -18,6 +18,12 @@ type Channel interface {
 	Clear(context.Context, string) error
 }
 
+// Unavailable returns a concurrent-safe Channel with no host facility behind
+// it. Each method returns an already-canceled context error when present and
+// otherwise returns ErrUnavailable. It is suitable for non-interactive hosts
+// that must supply an explicit Channel.
+func Unavailable() Channel { return unavailableChannel{} }
+
 // Level describes semantic severity without prescribing host behavior.
 type Level uint8
 
@@ -166,3 +172,32 @@ func StringsValue(value []string) Value {
 
 // ErrUnavailable indicates that no host facility can service an interaction.
 var ErrUnavailable = errors.New("interaction unavailable")
+
+type unavailableChannel struct{}
+
+var _ Channel = unavailableChannel{}
+
+func (unavailableChannel) Request(ctx context.Context, _ Request) (Response, error) {
+	return Response{}, unavailableError(ctx)
+}
+
+func (unavailableChannel) Emit(ctx context.Context, _ Event) error {
+	return unavailableError(ctx)
+}
+
+func (unavailableChannel) Set(ctx context.Context, _ State) error {
+	return unavailableError(ctx)
+}
+
+func (unavailableChannel) Clear(ctx context.Context, _ string) error {
+	return unavailableError(ctx)
+}
+
+func unavailableError(ctx context.Context) error {
+	if ctx != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+	}
+	return ErrUnavailable
+}

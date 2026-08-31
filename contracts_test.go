@@ -3,6 +3,7 @@ package sdk_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"io/fs"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"github.com/ingot-agent/sdk/httpx"
 	"github.com/ingot-agent/sdk/interaction"
 	"github.com/ingot-agent/sdk/model"
+	"github.com/ingot-agent/sdk/operation"
 	"github.com/ingot-agent/sdk/pipeline"
 	"github.com/ingot-agent/sdk/prompt"
 	"github.com/ingot-agent/sdk/session"
@@ -209,6 +211,29 @@ var (
 	_ = interaction.State{Name: "connection", Values: []interaction.Entry{{Name: "connected", Value: interaction.BooleanValue(false)}}}
 	_ = interaction.Response{Values: []interaction.Answer{{Name: "decision", Value: interaction.StringValue("yes")}}}
 )
+
+type operationImplementation struct{}
+
+func (operationImplementation) Definition() operation.Definition {
+	return operation.Definition{
+		Name:         "session.inspect",
+		Description:  "Inspect one session.",
+		InputSchema:  json.RawMessage(`{"type":"object"}`),
+		OutputSchema: json.RawMessage(`{"type":"object"}`),
+	}
+}
+
+func (operationImplementation) Invoke(context.Context, operation.Request) (operation.Result, error) {
+	return operation.Result{Output: json.RawMessage(`{}`)}, nil
+}
+
+var _ operation.Operation = operationImplementation{}
+
+var _ = operation.Request{
+	SessionID:   "session-1",
+	Input:       json.RawMessage(`{}`),
+	Interaction: interaction.Unavailable(),
+}
 
 type agentRuntime struct{}
 

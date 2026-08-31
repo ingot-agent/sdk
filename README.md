@@ -89,9 +89,23 @@ it uses.
 | `usage` | Model-aware input counting with explicit accuracy. |
 | `agent` | Agent turn execution, history access, and interception. |
 | `interaction` | Presentation-neutral structured effects between plugins and a host environment. |
+| `operation` | Externally invocable, transport-neutral plugin operations. |
 
 `interaction` describes semantic requests, events, and state. It deliberately
 does not define widgets, layouts, terminal behavior, or rendering.
+
+`operation` describes the opposite host boundary: an application ingress such
+as a CLI, HTTP service, GUI, or automation controller can discover and invoke
+the operations contributed by plugins. Each operation has a stable name,
+Draft 2020-12 JSON object schemas, a structured request and result, and a
+call-scoped `interaction.Channel`. Transport syntax, authentication,
+authorization, routing, and presentation remain owned by the ingress.
+
+Applications aggregate `[]operation.Operation` through the ordinary Component
+Graph. The SDK deliberately does not define a global operation runtime or
+service locator. Operations are external adapters: components that need to
+compose behavior with each other should continue to depend on precise typed
+capabilities instead of dispatching operations by name.
 
 The Component ABI (`Cleanup`, `Optional`, `Named`) and the runtime host
 contracts (invocation, lifecycle, state scope) live in the
@@ -200,6 +214,9 @@ says otherwise:
   behavior.
 - Contracts describe semantics, not a particular implementation, provider, or
   presentation.
+- Externally invocable operations use JSON objects for their initial input and
+  final output. Progress, follow-up values, and other host effects use the
+  invocation-scoped interaction channel.
 
 Package documentation is the source of truth for capability-specific behavior.
 
