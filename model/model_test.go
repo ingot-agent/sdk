@@ -9,6 +9,13 @@ import (
 
 type resolverFunc func(context.Context, model.Request) (model.Request, error)
 
+func TestStreamSemanticDefaultsToContent(t *testing.T) {
+	var event model.StreamEvent
+	if event.Semantic != model.StreamSemanticContent || model.StreamSemanticContent == model.StreamSemanticReasoning {
+		t.Fatal("legacy events must default to content, distinct from reasoning")
+	}
+}
+
 func (f resolverFunc) ResolveRequest(ctx context.Context, request model.Request) (model.Request, error) {
 	return f(ctx, request)
 }

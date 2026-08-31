@@ -87,7 +87,7 @@ it uses.
 | `prompt` | Prompt contribution and rendering. |
 | `contextwindow` | Model-context compaction. |
 | `usage` | Model-aware input counting with explicit accuracy. |
-| `agent` | Agent turn execution, history access, and interception. |
+| `agent` | Agent turn execution, reasoning/output streaming, history access, and interception. |
 | `interaction` | Presentation-neutral structured effects between plugins and a host environment. |
 
 `interaction` describes semantic requests, events, and state. It deliberately
@@ -233,3 +233,28 @@ go test -race ./...
 ## License
 
 [MIT](./LICENSE)
+
+## Agent output streaming
+
+`agent.StreamingRuntime` is independent of `agent.Runtime`. `Stream(ctx, turn,
+handler)` returns the canonical `agent.Result` while synchronously delivering
+`StreamReasoningDelta` (provider-explicit thinking) and `StreamOutputDelta`
+(user-visible assistant text). Both may occur in every model round, including
+rounds that invoke tools. Concatenated deltas are not the final result or session
+history. Tool, lifecycle, and interaction events are not part of this contract.
+
+Handlers run in order, without concurrent calls within a turn. Handler errors
+abort the turn and are returned unchanged; cancellation propagates to model and
+tool calls. Nil handlers return `agent.ErrNilStreamHandler`. Missing streaming
+support returns `agent.ErrStreamingUnsupported`, with no implicit fallback.
+
+`model.StreamEvent.Semantic` defaults to `StreamSemanticContent` for existing
+providers. `StreamSemanticReasoning` carries transient text and is excluded from
+`Response.Message.Content`. Set the semantic on every part start/delta/end.
+Part indices are contiguous from zero independently for each semantic, allowing
+reasoning and content to interleave without changing canonical content indices.
+Only start events carry `PartKind`, `MIMEType`, and `Name`.
+
+When developing this SDK together with an adjacent `ingot-agent` checkout, run
+`go work use ../sdk` from that checkout to compile plugins against these local
+contracts. Published plugin modules must use an SDK release containing them.
