@@ -30,8 +30,9 @@ type Runtime interface {
 }
 
 // History loads the validated, persisted model messages for one session.
-// Loads for the same session are serialized with Runtime.Run; different
-// sessions may be loaded concurrently. The returned aggregate and all nested
+// Loads for the same session are serialized with Runtime.Run and
+// StreamingRuntime.Stream; different sessions may be loaded concurrently.
+// The returned aggregate and all nested
 // mutable values are owned by the caller.
 type History interface {
 	Load(context.Context, session.ID) ([]model.Message, error)

@@ -90,13 +90,31 @@ const (
 	StreamPartEnd
 )
 
+// StreamSemantic describes the purpose of a streamed part independently of
+// its content modality.
+type StreamSemantic uint8
+
+const (
+	// StreamSemanticContent is ordinary response content. Its zero value keeps
+	// existing providers compatible.
+	StreamSemanticContent StreamSemantic = iota
+	// StreamSemanticReasoning is provider-explicit reasoning/thinking text.
+	// It is transient and does not enter Response.Message.Content.
+	StreamSemanticReasoning
+)
+
 // StreamEvent is one ordered event in a streamed response. PartIndex is
-// zero-based and identifies the corresponding part in the final response.
+// zero-based within each Semantic. Content indices identify the corresponding
+// part in the final response; reasoning indices identify transient text parts.
+// Each semantic has one active part at a time; the two streams may interleave.
+// Semantic is set on every start/delta/end event. PartKind, MIMEType and Name
+// are set only on start; delta/end retain the part's index and semantic.
 // DataDelta is immutable only for the duration of a handler call; handlers
 // that retain it must copy it.
 type StreamEvent struct {
 	Kind      StreamEventKind
 	PartIndex int
+	Semantic  StreamSemantic
 
 	PartKind content.Kind
 	MIMEType string
