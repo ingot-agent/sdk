@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/ingot-agent/sdk/content"
 	"github.com/ingot-agent/sdk/pipeline"
 )
 
@@ -23,9 +24,10 @@ type Call struct {
 	Arguments json.RawMessage
 }
 
-// Result is the text result of a tool invocation.
+// Result is the ordered multimodal result of a tool invocation. The returned
+// aggregate and nested inline data are owned by the caller.
 type Result struct {
-	Content string
+	Content content.Content
 }
 
 // Tool defines and executes one tool. Implementations are safe for concurrent

@@ -3,7 +3,6 @@ package session
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"time"
 )
@@ -22,7 +21,7 @@ type Metadata struct {
 type Entry struct {
 	Kind    string
 	Version int
-	Payload json.RawMessage
+	Payload []byte
 }
 
 // Query controls session listing pagination.

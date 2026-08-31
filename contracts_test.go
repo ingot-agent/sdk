@@ -1,11 +1,15 @@
 package sdk_test
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"io/fs"
 	"net/http"
 
 	"github.com/ingot-agent/sdk/agent"
+	"github.com/ingot-agent/sdk/asset"
+	"github.com/ingot-agent/sdk/content"
 	"github.com/ingot-agent/sdk/contextwindow"
 	"github.com/ingot-agent/sdk/filesystem"
 	"github.com/ingot-agent/sdk/httpx"
@@ -42,6 +46,23 @@ func (workspaceFS) Rename(context.Context, string, string) error           { ret
 
 var _ filesystem.FS = workspaceFS{}
 
+type assetStore struct{}
+
+func (assetStore) Stat(context.Context, asset.Reference) (asset.Info, error) {
+	return asset.Info{}, nil
+}
+func (assetStore) Open(context.Context, asset.Reference) (io.ReadCloser, error) {
+	return io.NopCloser(bytes.NewReader(nil)), nil
+}
+func (assetStore) Put(context.Context, asset.PutRequest) (asset.Reference, asset.Info, error) {
+	return asset.Reference{}, asset.Info{}, nil
+}
+
+var (
+	_ asset.Resolver = assetStore{}
+	_ asset.Store    = assetStore{}
+)
+
 type toolImplementation struct{}
 
 func (toolImplementation) Definition() tool.Definition { return tool.Definition{} }
@@ -68,6 +89,14 @@ func (modelProvider) Complete(context.Context, model.Request) (model.Response, e
 
 var _ model.Provider = modelProvider{}
 
+type capabilityProvider struct{ modelProvider }
+
+func (capabilityProvider) Capabilities(context.Context, string) (model.Capabilities, error) {
+	return model.Capabilities{}, nil
+}
+
+var _ model.CapabilityProvider = capabilityProvider{}
+
 type streamingProvider struct{ modelProvider }
 
 func (streamingProvider) Stream(
@@ -82,9 +111,14 @@ var _ model.StreamingProvider = streamingProvider{}
 
 type modelRuntime struct{ streamingProvider }
 
+func (modelRuntime) ResolveCapabilities(context.Context, model.CapabilityRequest) (model.Capabilities, error) {
+	return model.Capabilities{}, nil
+}
+
 var (
-	_ model.Runtime          = modelRuntime{}
-	_ model.StreamingRuntime = modelRuntime{}
+	_ model.Runtime            = modelRuntime{}
+	_ model.StreamingRuntime   = modelRuntime{}
+	_ model.CapabilityResolver = modelRuntime{}
 )
 
 type store struct{}
@@ -138,7 +172,7 @@ var _ = contextwindow.CompactionRequest{
 }
 
 var _ = contextwindow.CompactionResult{
-	Messages: []model.Message{{Role: model.RoleUser, Content: "hello"}},
+	Messages: []model.Message{{Role: model.RoleUser, Content: content.FromText("hello")}},
 	Changed:  true,
 }
 
