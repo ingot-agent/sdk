@@ -4,6 +4,7 @@ package prompt
 import (
 	"context"
 
+	"github.com/ingot-agent/sdk/content"
 	"github.com/ingot-agent/sdk/model"
 	"github.com/ingot-agent/sdk/session"
 )
@@ -11,14 +12,14 @@ import (
 // Request is the input to contributors and renderers.
 type Request struct {
 	SessionID session.ID
-	Input     string
+	Input     content.Content
 	History   []model.Message
 }
 
 // Block is one named prompt contribution.
 type Block struct {
 	Name    string
-	Content string
+	Content content.Content
 }
 
 // Contributor produces prompt blocks. Collections of contributors are invoked

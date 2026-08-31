@@ -79,8 +79,10 @@ it uses.
 | `pipeline` | Generic typed interceptor composition. |
 | `httpx` | A shared, context-aware HTTP client capability. |
 | `filesystem` | Safe workspace-relative filesystem access. |
+| `asset` | Immutable binary asset storage and resolution. |
+| `content` | Ordered, provider-neutral multimodal content and attachments. |
 | `tool` | Tool definitions, invocation, runtime lookup, and interception. |
-| `model` | Model providers, complete and streaming runtimes, request resolution, and interception. |
+| `model` | Model providers, complete/part-streaming runtimes, request and capability resolution, and interception. |
 | `session` | Ordered session persistence and mutable session metadata. |
 | `prompt` | Prompt contribution and rendering. |
 | `contextwindow` | Model-context compaction. |
@@ -113,6 +115,20 @@ Runtime-facing contracts previously published by this module have moved to
 The ABI repository is fixed infrastructure shared by the Builder and generated
 Runtime Images. This SDK remains an optional collection of agent capability
 contracts.
+
+## Multimodal v0.2 contracts
+
+SDK v0.2 uses `content.Content` as the ordered content value shared by model,
+tool, prompt, and agent results. Text, image, audio, video, and file parts can
+use inline bytes, a URI, or an opaque immutable `asset.Reference`; concrete
+providers remain authoritative for modality, source, MIME, role, and size
+support.
+
+The same release changes `session.Entry.Payload` to opaque `[]byte`, replaces
+text-only stream chunks with part start/delta/end events, adds ordered agent
+attachments, and exposes optional read-only model capability resolution. These
+are breaking contract changes from v0.1 and consumers must migrate as one Go
+module graph.
 
 ## Using the standard SDK
 
@@ -173,6 +189,11 @@ says otherwise:
   defines a narrower ordering rule.
 - Aggregate inputs are immutable by contract. A callee copies mutable data it
   retains, and ownership of aggregate outputs passes to the caller on return.
+- Multimodal content has one ordered representation shared by model, tool,
+  prompt, and agent contracts. Nested inline bytes follow the same ownership
+  rules as their enclosing aggregate.
+- Asset references are opaque immutable identities. A URI is a location or
+  identifier, not implicit filesystem or network authorization.
 - Errors use ordinary Go error chains and preserve context and package sentinel
   errors through `errors.Is` and `errors.As`.
 - Ordering is explicit and deterministic wherever it affects observable

@@ -4,6 +4,7 @@ package agent
 import (
 	"context"
 
+	"github.com/ingot-agent/sdk/content"
 	"github.com/ingot-agent/sdk/model"
 	"github.com/ingot-agent/sdk/pipeline"
 	"github.com/ingot-agent/sdk/session"
@@ -11,13 +12,15 @@ import (
 
 // Turn is one user input in a session.
 type Turn struct {
-	SessionID session.ID
-	Input     string
+	SessionID   session.ID
+	Input       string
+	Attachments []content.Attachment
 }
 
-// Result is the text result of an agent turn.
+// Result is the ordered multimodal result of an agent turn. The returned
+// aggregate and nested inline data are owned by the caller.
 type Result struct {
-	Output string
+	Output content.Content
 }
 
 // Runtime executes agent turns. Turns for different sessions may run in
