@@ -15,6 +15,7 @@ import (
 	"github.com/ingot-agent/sdk/httpx"
 	"github.com/ingot-agent/sdk/interaction"
 	"github.com/ingot-agent/sdk/model"
+	"github.com/ingot-agent/sdk/observation"
 	"github.com/ingot-agent/sdk/pipeline"
 	"github.com/ingot-agent/sdk/prompt"
 	"github.com/ingot-agent/sdk/session"
@@ -217,6 +218,19 @@ func (agentRuntime) Run(context.Context, agent.Turn) (agent.Result, error) {
 }
 
 var _ agent.Runtime = agentRuntime{}
+
+type observationConsumer struct{}
+
+func (observationConsumer) Emit(context.Context, observation.Detail) {}
+
+type executionObserver struct{}
+
+func (executionObserver) Observe(observation.Event) {}
+
+var (
+	_ observation.Consumer = observationConsumer{}
+	_ observation.Observer = executionObserver{}
+)
 
 type toolInterceptor struct{}
 

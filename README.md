@@ -88,6 +88,7 @@ it uses.
 | `contextwindow` | Model-context compaction. |
 | `usage` | Model-aware input counting with explicit accuracy. |
 | `agent` | Agent turn execution, reasoning/output streaming, history access, and interception. |
+| `observation` | Passive, correlated Turn/Round/Model/Tool execution facts. |
 | `interaction` | Presentation-neutral structured effects between plugins and a host environment. |
 
 `interaction` describes semantic requests, events, and state. It deliberately
@@ -202,6 +203,14 @@ says otherwise:
   presentation.
 
 Package documentation is the source of truth for capability-specific behavior.
+
+`observation.Consumer` is a non-control-plane ingestion contract: it does not
+return errors, and observer work must not synchronously gate the execution it
+observes. Events form a closed Turn/Round/Model/Tool lifecycle family, carry a
+per-turn sequence and context-propagated correlation, and are detached
+snapshots. Model streaming maps to provisional model progress. Tools may emit
+opaque-channel `tool.Progress`; progress is transient and is not a partial
+`tool.Result`.
 
 ## Evolving the SDK
 
