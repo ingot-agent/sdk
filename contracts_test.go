@@ -200,8 +200,8 @@ var (
 
 type agentRuntime struct{}
 
-func (agentRuntime) Run(context.Context, agent.Turn) (agent.Result, error) {
-	return agent.Result{}, nil
+func (agentRuntime) Run(context.Context, agent.Turn) (agent.Execution, error) {
+	return agent.Execution{}, nil
 }
 
 var _ agent.Runtime = agentRuntime{}

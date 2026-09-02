@@ -35,10 +35,11 @@ type StreamHandler func(StreamEvent) error
 // Turns for one session are serialized with Run and History.Load; different
 // sessions may run concurrently. Input aggregates are immutable.
 //
-// Stream returns a canonical, caller-owned Result only when its error is nil;
-// callers must ignore Result on error. The Result can differ from concatenated
-// deltas. Reasoning need not be present and is not persisted merely because it
-// was streamed. Tool and lifecycle events are excluded. Implementations may
+// Stream returns an Execution with a canonical, caller-owned Result only when
+// its error is nil. Once the turn lifecycle starts, Outcome remains valid on
+// failure or cancellation. The Result can differ from concatenated deltas.
+// Reasoning need not be present and is not persisted merely because it was
+// streamed. Tool and lifecycle events are excluded. Implementations may
 // complete successfully without delivering any StreamEvent.
 //
 // A nil handler returns ErrNilStreamHandler. Implementations may transparently
@@ -47,5 +48,5 @@ type StreamHandler func(StreamEvent) error
 // without rolling back completed durable or external effects, and do not imply
 // that retrying the turn is safe.
 type StreamingRuntime interface {
-	Stream(context.Context, Turn, StreamHandler) (Result, error)
+	Stream(context.Context, Turn, StreamHandler) (Execution, error)
 }
