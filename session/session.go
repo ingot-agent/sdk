@@ -41,6 +41,14 @@ type Summary struct {
 // Store persists sessions. Successful appends to one session form a total
 // order and are returned by Load in that order. Different sessions may be
 // accessed concurrently.
+//
+// Append returning nil means the entry is definitely committed. Append
+// returning an error means commit status is unknown to the caller; callers must
+// not retry merely because an error was returned. The commit decision is final
+// when Append returns: an Append that committed is visible to every successful
+// Load begun after that return, and an Append that did not commit will not
+// appear. Implementations must not publish an entry later after returning an
+// error.
 type Store interface {
 	Create(context.Context, Metadata) (ID, error)
 	Append(context.Context, ID, Entry) error

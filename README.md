@@ -82,7 +82,7 @@ it uses.
 | `asset` | Immutable binary asset storage and resolution. |
 | `content` | Ordered, provider-neutral multimodal content and attachments. |
 | `tool` | Tool definitions, invocation, runtime lookup, and interception. |
-| `model` | Model providers, complete/part-streaming runtimes, request and capability resolution, and interception. |
+| `model` | Model providers, complete/part-streaming runtimes, request resolution, and interception. |
 | `session` | Ordered session persistence and mutable session metadata. |
 | `prompt` | Prompt contribution and rendering. |
 | `contextwindow` | Model-context compaction. |
@@ -243,6 +243,16 @@ go test -race ./...
 
 [MIT](./LICENSE)
 
+## Execution semantics v0.3
+
+Milestone 3 treats model streaming as an incremental-delivery optimization.
+The model capability metadata APIs introduced in v0.2
+(`CapabilityRequest`, `ContentCapability`, `Capabilities`,
+`CapabilityResolver`, `CapabilityProvider`, and
+`ErrCapabilitiesUnavailable`) have been removed; typed dependencies and real
+operations remain the capability boundary. The Agent-level
+`ErrStreamingUnsupported` sentinel has likewise been removed.
+
 ## Agent output streaming
 
 `agent.StreamingRuntime` is independent of `agent.Runtime`. `Stream(ctx, turn,
@@ -254,8 +264,10 @@ history. Tool, lifecycle, and interaction events are not part of this contract.
 
 Handlers run in order, without concurrent calls within a turn. Handler errors
 abort the turn and are returned unchanged; cancellation propagates to model and
-tool calls. Nil handlers return `agent.ErrNilStreamHandler`. Missing streaming
-support returns `agent.ErrStreamingUnsupported`, with no implicit fallback.
+tool calls without rolling back completed effects. Nil handlers return
+`agent.ErrNilStreamHandler`. An agent may use model completion when streaming is
+unavailable, and a successful stream may deliver zero events. Any event already
+delivered is transient progress rather than a canonical result if Stream fails.
 
 `model.StreamEvent.Semantic` defaults to `StreamSemanticContent` for existing
 providers. `StreamSemanticReasoning` carries transient text and is excluded from

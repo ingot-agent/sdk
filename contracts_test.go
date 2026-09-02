@@ -90,14 +90,6 @@ func (modelProvider) Complete(context.Context, model.Request) (model.Response, e
 
 var _ model.Provider = modelProvider{}
 
-type capabilityProvider struct{ modelProvider }
-
-func (capabilityProvider) Capabilities(context.Context, string) (model.Capabilities, error) {
-	return model.Capabilities{}, nil
-}
-
-var _ model.CapabilityProvider = capabilityProvider{}
-
 type streamingProvider struct{ modelProvider }
 
 func (streamingProvider) Stream(
@@ -112,14 +104,9 @@ var _ model.StreamingProvider = streamingProvider{}
 
 type modelRuntime struct{ streamingProvider }
 
-func (modelRuntime) ResolveCapabilities(context.Context, model.CapabilityRequest) (model.Capabilities, error) {
-	return model.Capabilities{}, nil
-}
-
 var (
-	_ model.Runtime            = modelRuntime{}
-	_ model.StreamingRuntime   = modelRuntime{}
-	_ model.CapabilityResolver = modelRuntime{}
+	_ model.Runtime          = modelRuntime{}
+	_ model.StreamingRuntime = modelRuntime{}
 )
 
 type store struct{}
