@@ -25,7 +25,9 @@ type Detail interface {
 	observationDetail()
 }
 
-// Status identifies the terminal state of an execution scope.
+// Status identifies the terminal completion state of an execution scope, not
+// external-world truth. Failed or canceled scopes may have durable progress or
+// external side effects, and their status does not imply retry safety.
 type Status uint8
 
 const (

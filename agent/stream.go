@@ -24,7 +24,9 @@ type StreamEvent struct {
 // StreamHandler receives events synchronously, in order, without concurrent
 // calls within a turn. Returning an error aborts the turn immediately; the
 // original error is returned and no later events or tools may be dispatched.
-// Already completed side effects are not rolled back.
+// Every invocation of the handler is externally observable stream progress,
+// including an invocation that returns an error. Already completed side effects
+// are not rolled back.
 type StreamHandler func(StreamEvent) error
 
 // StreamingRuntime independently exposes incremental agent output. It does not
@@ -33,12 +35,17 @@ type StreamHandler func(StreamEvent) error
 // Turns for one session are serialized with Run and History.Load; different
 // sessions may run concurrently. Input aggregates are immutable.
 //
-// Stream returns the canonical, caller-owned Result, which can differ from the
-// concatenated deltas. Reasoning need not be present and is not persisted merely
-// because it was streamed. Tool and lifecycle events are excluded.
-// A nil handler returns ErrNilStreamHandler. Missing model streaming support
-// returns ErrStreamingUnsupported, without implicit fallback to Run/Complete.
-// Cancellation and deadlines propagate through model and tool calls.
+// Stream returns a canonical, caller-owned Result only when its error is nil;
+// callers must ignore Result on error. The Result can differ from concatenated
+// deltas. Reasoning need not be present and is not persisted merely because it
+// was streamed. Tool and lifecycle events are excluded. Implementations may
+// complete successfully without delivering any StreamEvent.
+//
+// A nil handler returns ErrNilStreamHandler. Implementations may transparently
+// use a non-streaming model path when streaming is unavailable, provided their
+// execution contract permits it. Cancellation and deadlines stop future work
+// without rolling back completed durable or external effects, and do not imply
+// that retrying the turn is safe.
 type StreamingRuntime interface {
 	Stream(context.Context, Turn, StreamHandler) (Result, error)
 }
