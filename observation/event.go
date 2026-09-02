@@ -44,13 +44,15 @@ type TurnStarted struct {
 	Turn agent.Turn
 }
 
-// TurnFinished reports exactly one terminal outcome for a started turn.
-// Result is non-nil only for StatusSucceeded; Error is non-empty only for
-// StatusFailed and StatusCanceled.
+// TurnFinished reports exactly one terminal event for a started turn. Outcome
+// is the Runtime's authoritative settlement for every status. Result is
+// non-nil only for StatusSucceeded; Error is non-empty only for StatusFailed
+// and StatusCanceled.
 type TurnFinished struct {
-	Status Status
-	Result *agent.Result
-	Error  string
+	Status  Status
+	Result  *agent.Result
+	Outcome agent.Outcome
+	Error   string
 }
 
 // RoundStarted reports that the correlated zero-based round attempt began.

@@ -16,6 +16,15 @@ func TestStreamSemanticDefaultsToContent(t *testing.T) {
 	}
 }
 
+func TestUsageReportedDistinguishesZeroFromUnavailable(t *testing.T) {
+	if (model.Usage{}).Reported {
+		t.Fatal("zero usage must be unavailable")
+	}
+	if !(model.Usage{Reported: true}).Reported {
+		t.Fatal("reported zero usage must retain presence")
+	}
+}
+
 func (f resolverFunc) ResolveRequest(ctx context.Context, request model.Request) (model.Request, error) {
 	return f(ctx, request)
 }

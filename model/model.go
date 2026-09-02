@@ -42,11 +42,13 @@ type Request struct {
 	Stop        []string
 }
 
-// Usage reports token counts for a model response.
+// Usage reports token counts for a model response. Reported distinguishes an
+// explicitly reported zero from unavailable provider execution usage.
 type Usage struct {
 	InputTokens  int
 	OutputTokens int
 	TotalTokens  int
+	Reported     bool
 }
 
 // Response is the final result of a complete or streaming model invocation.
