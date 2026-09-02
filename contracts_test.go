@@ -111,17 +111,35 @@ var (
 
 type store struct{}
 
-func (store) Create(context.Context, session.Metadata) (session.ID, error) { return "", nil }
-func (store) Append(context.Context, session.ID, session.Entry) error      { return nil }
-func (store) Load(context.Context, session.ID) ([]session.Entry, error)    { return nil, nil }
-func (store) List(context.Context, session.Query) ([]session.Summary, error) {
+func (store) Create(context.Context, session.CreateRequest) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) Append(context.Context, session.ID, session.Entry) error   { return nil }
+func (store) Load(context.Context, session.ID) ([]session.Entry, error) { return nil, nil }
+func (store) Get(context.Context, session.ID) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) Rename(context.Context, session.ID, string) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) Archive(context.Context, session.ID) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) Restore(context.Context, session.ID) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) Delete(context.Context, session.ID) error { return nil }
+func (store) Fork(context.Context, session.ID, session.ForkRequest) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) List(context.Context) ([]session.Metadata, error) {
 	return nil, nil
 }
-func (store) Rename(context.Context, session.ID, string) error { return nil }
 
 var (
-	_ session.Store        = store{}
-	_ session.MutableStore = store{}
+	_ session.Store   = store{}
+	_ session.Manager = store{}
+	_ session.Query   = store{}
 )
 
 type contributor struct{}

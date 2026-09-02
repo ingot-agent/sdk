@@ -83,7 +83,7 @@ it uses.
 | `content` | Ordered, provider-neutral multimodal content and attachments. |
 | `tool` | Tool definitions, invocation, runtime lookup, and interception. |
 | `model` | Model providers, complete/part-streaming runtimes, request resolution, provider-reported usage, and interception. |
-| `session` | Ordered session persistence and mutable session metadata. |
+| `session` | Opaque session persistence, lifecycle management, and discovery. |
 | `prompt` | Prompt contribution and rendering. |
 | `contextwindow` | Model-context compaction. |
 | `usage` | Model-aware input counting with explicit accuracy. |
