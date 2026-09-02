@@ -82,12 +82,12 @@ it uses.
 | `asset` | Immutable binary asset storage and resolution. |
 | `content` | Ordered, provider-neutral multimodal content and attachments. |
 | `tool` | Tool definitions, invocation, runtime lookup, and interception. |
-| `model` | Model providers, complete/part-streaming runtimes, request resolution, and interception. |
+| `model` | Model providers, complete/part-streaming runtimes, request resolution, provider-reported usage, and interception. |
 | `session` | Opaque session persistence, lifecycle management, and discovery. |
 | `prompt` | Prompt contribution and rendering. |
 | `contextwindow` | Model-context compaction. |
 | `usage` | Model-aware input counting with explicit accuracy. |
-| `agent` | Agent turn execution, reasoning/output streaming, history access, and interception. |
+| `agent` | Agent turn execution and outcome accounting, reasoning/output streaming, history access, and interception. |
 | `observation` | Passive, correlated Turn/Round/Model/Tool execution facts. |
 | `interaction` | Presentation-neutral structured effects between plugins and a host environment. |
 
@@ -256,7 +256,7 @@ operations remain the capability boundary. The Agent-level
 ## Agent output streaming
 
 `agent.StreamingRuntime` is independent of `agent.Runtime`. `Stream(ctx, turn,
-handler)` returns the canonical `agent.Result` while synchronously delivering
+handler)` returns an `agent.Execution` while synchronously delivering
 `StreamReasoningDelta` (provider-explicit thinking) and `StreamOutputDelta`
 (user-visible assistant text). Both may occur in every model round, including
 rounds that invoke tools. Concatenated deltas are not the final result or session
@@ -268,6 +268,21 @@ tool calls without rolling back completed effects. Nil handlers return
 `agent.ErrNilStreamHandler`. An agent may use model completion when streaming is
 unavailable, and a successful stream may deliver zero events. Any event already
 delivered is transient progress rather than a canonical result if Stream fails.
+
+## Execution outcome and accounting v0.4
+
+`agent.Runtime.Run` and `agent.StreamingRuntime.Stream` return an
+`agent.Execution`. A successful execution contains a canonical `Result`; once
+the Turn lifecycle starts, failed and canceled executions still contain an
+authoritative `Outcome` with duration, failure stage, and Turn-level accounting.
+A zero `Execution` means validation failed before the lifecycle was established.
+
+Accounting counts started Round, Model Runtime, and canonical Tool Runtime
+attempts. It aggregates only provider-reported execution usage and exposes
+`Unavailable`, `Partial`, or `Complete` coverage instead of filling gaps with
+estimates. Provider/model attribution comes only from authoritative successful
+model responses. Outcome and failure stages do not imply rollback, durability,
+external side-effect state, cost, or retry safety.
 
 `model.StreamEvent.Semantic` defaults to `StreamSemanticContent` for existing
 providers. `StreamSemanticReasoning` carries transient text and is excluded from
