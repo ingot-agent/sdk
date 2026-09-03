@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./asset/icon.png" alt="ingot logo" width="180">
+</p>
+
 # ingot SDK
 
 > Optional, domain-neutral Go contracts for interoperable agent plugins.
