@@ -1,6 +1,11 @@
 package interaction
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"sync"
+	"testing"
+)
 
 func TestValueConstructors(t *testing.T) {
 	strings := []string{"one", "two"}
@@ -27,4 +32,48 @@ func TestValueConstructors(t *testing.T) {
 	if tests[4].value.Strings[0] != "one" {
 		t.Fatalf("StringsValue retained caller slice: %#v", tests[4].value.Strings)
 	}
+}
+
+func TestUnavailableChannel(t *testing.T) {
+	channel := Unavailable()
+	operations := []struct {
+		name string
+		call func(context.Context) error
+	}{
+		{name: "request", call: func(ctx context.Context) error {
+			_, err := channel.Request(ctx, Request{})
+			return err
+		}},
+		{name: "emit", call: func(ctx context.Context) error { return channel.Emit(ctx, Event{}) }},
+		{name: "set", call: func(ctx context.Context) error { return channel.Set(ctx, State{}) }},
+		{name: "clear", call: func(ctx context.Context) error { return channel.Clear(ctx, "state") }},
+	}
+	for _, operation := range operations {
+		t.Run(operation.name, func(t *testing.T) {
+			if err := operation.call(context.Background()); !errors.Is(err, ErrUnavailable) {
+				t.Fatalf("error = %v, want ErrUnavailable", err)
+			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			if err := operation.call(ctx); !errors.Is(err, context.Canceled) {
+				t.Fatalf("canceled error = %v, want context.Canceled", err)
+			}
+		})
+	}
+}
+
+func TestUnavailableChannelConcurrentUse(t *testing.T) {
+	channel := Unavailable()
+	var calls sync.WaitGroup
+	for range 32 {
+		calls.Add(1)
+		go func() {
+			defer calls.Done()
+			if err := channel.Emit(context.Background(), Event{}); !errors.Is(err, ErrUnavailable) {
+				t.Errorf("Emit error = %v, want ErrUnavailable", err)
+			}
+		}()
+	}
+	calls.Wait()
 }
