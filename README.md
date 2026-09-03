@@ -82,12 +82,13 @@ it uses.
 | `asset` | Immutable binary asset storage and resolution. |
 | `content` | Ordered, provider-neutral multimodal content and attachments. |
 | `tool` | Tool definitions, invocation, runtime lookup, and interception. |
-| `model` | Model providers, complete/part-streaming runtimes, request and capability resolution, and interception. |
-| `session` | Ordered session persistence and mutable session metadata. |
+| `model` | Model providers, complete/part-streaming runtimes, request resolution, provider-reported usage, and interception. |
+| `session` | Opaque session persistence, lifecycle management, and discovery. |
 | `prompt` | Prompt contribution and rendering. |
 | `contextwindow` | Model-context compaction. |
 | `usage` | Model-aware input counting with explicit accuracy. |
-| `agent` | Agent turn execution, history access, and interception. |
+| `agent` | Agent turn execution and outcome accounting, reasoning/output streaming, history access, and interception. |
+| `observation` | Passive, correlated Turn/Round/Model/Tool execution facts. |
 | `interaction` | Presentation-neutral structured effects between plugins and a host environment. |
 | `operation` | Externally invocable, transport-neutral plugin operations. |
 
@@ -220,6 +221,14 @@ says otherwise:
 
 Package documentation is the source of truth for capability-specific behavior.
 
+`observation.Consumer` is a non-control-plane ingestion contract: it does not
+return errors, and observer work must not synchronously gate the execution it
+observes. Events form a closed Turn/Round/Model/Tool lifecycle family, carry a
+per-turn sequence and context-propagated correlation, and are detached
+snapshots. Model streaming maps to provisional model progress. Tools may emit
+opaque-channel `tool.Progress`; progress is transient and is not a partial
+`tool.Result`.
+
 ## Evolving the SDK
 
 The SDK is a shared dependency, so additions should be conservative:
@@ -250,3 +259,55 @@ go test -race ./...
 ## License
 
 [MIT](./LICENSE)
+
+## Execution semantics v0.3
+
+Milestone 3 treats model streaming as an incremental-delivery optimization.
+The model capability metadata APIs introduced in v0.2
+(`CapabilityRequest`, `ContentCapability`, `Capabilities`,
+`CapabilityResolver`, `CapabilityProvider`, and
+`ErrCapabilitiesUnavailable`) have been removed; typed dependencies and real
+operations remain the capability boundary. The Agent-level
+`ErrStreamingUnsupported` sentinel has likewise been removed.
+
+## Agent output streaming
+
+`agent.StreamingRuntime` is independent of `agent.Runtime`. `Stream(ctx, turn,
+handler)` returns an `agent.Execution` while synchronously delivering
+`StreamReasoningDelta` (provider-explicit thinking) and `StreamOutputDelta`
+(user-visible assistant text). Both may occur in every model round, including
+rounds that invoke tools. Concatenated deltas are not the final result or session
+history. Tool, lifecycle, and interaction events are not part of this contract.
+
+Handlers run in order, without concurrent calls within a turn. Handler errors
+abort the turn and are returned unchanged; cancellation propagates to model and
+tool calls without rolling back completed effects. Nil handlers return
+`agent.ErrNilStreamHandler`. An agent may use model completion when streaming is
+unavailable, and a successful stream may deliver zero events. Any event already
+delivered is transient progress rather than a canonical result if Stream fails.
+
+## Execution outcome and accounting v0.4
+
+`agent.Runtime.Run` and `agent.StreamingRuntime.Stream` return an
+`agent.Execution`. A successful execution contains a canonical `Result`; once
+the Turn lifecycle starts, failed and canceled executions still contain an
+authoritative `Outcome` with duration, failure stage, and Turn-level accounting.
+A zero `Execution` means validation failed before the lifecycle was established.
+
+Accounting counts started Round, Model Runtime, and canonical Tool Runtime
+attempts. It aggregates only provider-reported execution usage and exposes
+`Unavailable`, `Partial`, or `Complete` coverage instead of filling gaps with
+estimates. Provider/model attribution comes only from authoritative successful
+model responses. Outcome and failure stages do not imply rollback, durability,
+external side-effect state, cost, or retry safety.
+
+`model.StreamEvent.Semantic` defaults to `StreamSemanticContent` for existing
+providers. `StreamSemanticReasoning` carries transient text and is excluded from
+`Response.Message.Content`. Set the semantic on every part start/delta/end.
+Part indices are contiguous from zero independently for each semantic, allowing
+reasoning and content to interleave without changing canonical content indices.
+Only start events carry `PartKind`, `MIMEType`, and `Name`.
+
+When developing this SDK together with an adjacent `ingot-agent` checkout, run
+`go work use ../sdk` from that checkout to compile plugins against these local
+contracts. Published plugin modules must use an SDK release containing them.

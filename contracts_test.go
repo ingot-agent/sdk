@@ -17,6 +17,7 @@ import (
 	"github.com/ingot-agent/sdk/interaction"
 	"github.com/ingot-agent/sdk/model"
 	"github.com/ingot-agent/sdk/operation"
+	"github.com/ingot-agent/sdk/observation"
 	"github.com/ingot-agent/sdk/pipeline"
 	"github.com/ingot-agent/sdk/prompt"
 	"github.com/ingot-agent/sdk/session"
@@ -91,14 +92,6 @@ func (modelProvider) Complete(context.Context, model.Request) (model.Response, e
 
 var _ model.Provider = modelProvider{}
 
-type capabilityProvider struct{ modelProvider }
-
-func (capabilityProvider) Capabilities(context.Context, string) (model.Capabilities, error) {
-	return model.Capabilities{}, nil
-}
-
-var _ model.CapabilityProvider = capabilityProvider{}
-
 type streamingProvider struct{ modelProvider }
 
 func (streamingProvider) Stream(
@@ -113,29 +106,42 @@ var _ model.StreamingProvider = streamingProvider{}
 
 type modelRuntime struct{ streamingProvider }
 
-func (modelRuntime) ResolveCapabilities(context.Context, model.CapabilityRequest) (model.Capabilities, error) {
-	return model.Capabilities{}, nil
-}
-
 var (
-	_ model.Runtime            = modelRuntime{}
-	_ model.StreamingRuntime   = modelRuntime{}
-	_ model.CapabilityResolver = modelRuntime{}
+	_ model.Runtime          = modelRuntime{}
+	_ model.StreamingRuntime = modelRuntime{}
 )
 
 type store struct{}
 
-func (store) Create(context.Context, session.Metadata) (session.ID, error) { return "", nil }
-func (store) Append(context.Context, session.ID, session.Entry) error      { return nil }
-func (store) Load(context.Context, session.ID) ([]session.Entry, error)    { return nil, nil }
-func (store) List(context.Context, session.Query) ([]session.Summary, error) {
+func (store) Create(context.Context, session.CreateRequest) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) Append(context.Context, session.ID, session.Entry) error   { return nil }
+func (store) Load(context.Context, session.ID) ([]session.Entry, error) { return nil, nil }
+func (store) Get(context.Context, session.ID) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) Rename(context.Context, session.ID, string) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) Archive(context.Context, session.ID) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) Restore(context.Context, session.ID) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) Delete(context.Context, session.ID) error { return nil }
+func (store) Fork(context.Context, session.ID, session.ForkRequest) (session.Metadata, error) {
+	return session.Metadata{}, nil
+}
+func (store) List(context.Context) ([]session.Metadata, error) {
 	return nil, nil
 }
-func (store) Rename(context.Context, session.ID, string) error { return nil }
 
 var (
-	_ session.Store        = store{}
-	_ session.MutableStore = store{}
+	_ session.Store   = store{}
+	_ session.Manager = store{}
+	_ session.Query   = store{}
 )
 
 type contributor struct{}
@@ -237,11 +243,24 @@ var _ = operation.Request{
 
 type agentRuntime struct{}
 
-func (agentRuntime) Run(context.Context, agent.Turn) (agent.Result, error) {
-	return agent.Result{}, nil
+func (agentRuntime) Run(context.Context, agent.Turn) (agent.Execution, error) {
+	return agent.Execution{}, nil
 }
 
 var _ agent.Runtime = agentRuntime{}
+
+type observationConsumer struct{}
+
+func (observationConsumer) Emit(context.Context, observation.Detail) {}
+
+type executionObserver struct{}
+
+func (executionObserver) Observe(observation.Event) {}
+
+var (
+	_ observation.Consumer = observationConsumer{}
+	_ observation.Observer = executionObserver{}
+)
 
 type toolInterceptor struct{}
 

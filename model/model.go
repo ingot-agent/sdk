@@ -42,11 +42,13 @@ type Request struct {
 	Stop        []string
 }
 
-// Usage reports token counts for a model response.
+// Usage reports token counts for a model response. Reported distinguishes an
+// explicitly reported zero from unavailable provider execution usage.
 type Usage struct {
 	InputTokens  int
 	OutputTokens int
 	TotalTokens  int
+	Reported     bool
 }
 
 // Response is the final result of a complete or streaming model invocation.
@@ -59,13 +61,17 @@ type Response struct {
 }
 
 // Provider completes model requests. Implementations are safe for concurrent
-// requests.
+// requests. A Response is authoritative only when the returned error is nil;
+// an error does not imply that generation, billing, or other provider effects
+// did not occur or that retrying is safe.
 type Provider interface {
 	Complete(context.Context, Request) (Response, error)
 }
 
 // Runtime selects a named provider and executes complete requests through its
-// interceptor chain.
+// interceptor chain. A Response is authoritative only when the returned error
+// is nil. A non-nil error does not imply that provider-side effects did not
+// occur or that retrying the request is safe.
 type Runtime interface {
 	Complete(context.Context, Request) (Response, error)
 }
@@ -90,13 +96,31 @@ const (
 	StreamPartEnd
 )
 
+// StreamSemantic describes the purpose of a streamed part independently of
+// its content modality.
+type StreamSemantic uint8
+
+const (
+	// StreamSemanticContent is ordinary response content. Its zero value keeps
+	// existing providers compatible.
+	StreamSemanticContent StreamSemantic = iota
+	// StreamSemanticReasoning is provider-explicit reasoning/thinking text.
+	// It is transient and does not enter Response.Message.Content.
+	StreamSemanticReasoning
+)
+
 // StreamEvent is one ordered event in a streamed response. PartIndex is
-// zero-based and identifies the corresponding part in the final response.
+// zero-based within each Semantic. Content indices identify the corresponding
+// part in the final response; reasoning indices identify transient text parts.
+// Each semantic has one active part at a time; the two streams may interleave.
+// Semantic is set on every start/delta/end event. PartKind, MIMEType and Name
+// are set only on start; delta/end retain the part's index and semantic.
 // DataDelta is immutable only for the duration of a handler call; handlers
 // that retain it must copy it.
 type StreamEvent struct {
 	Kind      StreamEventKind
 	PartIndex int
+	Semantic  StreamSemantic
 
 	PartKind content.Kind
 	MIMEType string
@@ -111,14 +135,17 @@ type StreamEvent struct {
 type StreamHandler func(StreamEvent) error
 
 // StreamingProvider is a provider capable of both complete and streaming
-// requests.
+// requests. A Response is authoritative only when Stream returns nil. Events
+// delivered before an error are transient progress, not a canonical response.
 type StreamingProvider interface {
 	Provider
 	Stream(context.Context, Request, StreamHandler) (Response, error)
 }
 
 // StreamingRuntime selects a named streaming provider and executes requests
-// through the streaming interceptor chain.
+// through the streaming interceptor chain. A Response is authoritative only
+// when the returned error is nil. Delivered events are transient progress and
+// are not a canonical response when Stream returns an error.
 type StreamingRuntime interface {
 	Stream(context.Context, Request, StreamHandler) (Response, error)
 }
@@ -141,52 +168,14 @@ type StreamInterceptor interface {
 }
 
 var (
-	// ErrStreamingUnsupported indicates that the selected provider does not
-	// implement StreamingProvider.
+	// ErrStreamingUnsupported is an explicit pre-stream rejection indicating
+	// that streaming mode is unavailable. It is not a general invocation
+	// failure. Callers may use it for a documented mode fallback only when no
+	// externally observable stream progress has been delivered.
 	ErrStreamingUnsupported = errors.New("streaming unsupported")
 	// ErrProviderNotFound indicates that no provider has the requested name.
 	ErrProviderNotFound = errors.New("provider not found")
 	// ErrModelNotFound indicates that the selected provider does not expose the
 	// requested model.
 	ErrModelNotFound = errors.New("model not found")
-	// ErrCapabilitiesUnavailable indicates that the selected provider does not
-	// expose model capability information.
-	ErrCapabilitiesUnavailable = errors.New("model capabilities unavailable")
 )
-
-// CapabilityRequest selects a provider and model whose content capabilities
-// should be resolved using the runtime's normal defaulting rules.
-type CapabilityRequest struct {
-	Provider string
-	Model    string
-}
-
-// ContentCapability describes support for one content kind, its source forms,
-// and the message roles for which it is accepted.
-type ContentCapability struct {
-	Kind    content.Kind
-	Sources []content.SourceKind
-	Roles   []Role
-}
-
-// Capabilities describes model input, output, and streaming output support.
-// Returned slices and all nested slices are owned by the caller.
-type Capabilities struct {
-	Input           []ContentCapability
-	Output          []ContentCapability
-	StreamingOutput []content.Kind
-}
-
-// CapabilityResolver resolves model capabilities without invoking a model or
-// mutating provider configuration. Implementations are safe for concurrent
-// use and return caller-owned aggregates.
-type CapabilityResolver interface {
-	ResolveCapabilities(context.Context, CapabilityRequest) (Capabilities, error)
-}
-
-// CapabilityProvider is an optional read-only extension implemented by model
-// providers that expose capability information. It does not change Provider.
-type CapabilityProvider interface {
-	Provider
-	Capabilities(context.Context, string) (Capabilities, error)
-}
