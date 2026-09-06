@@ -5,6 +5,8 @@ package interaction
 import (
 	"context"
 	"errors"
+
+	"github.com/ingot-agent/sdk/execution"
 )
 
 // Channel lets a plugin request values from, emit events to, and publish
@@ -18,11 +20,33 @@ type Channel interface {
 	Clear(context.Context, string) error
 }
 
+// ExecutionBinder derives an interaction Channel with an immutable binding to
+// one explicit dynamic execution scope. It is the execution-side capability
+// for plugins whose interaction effects must be routed to the Session that owns
+// a runtime invocation.
+//
+// Bind is concurrent-safe and does not perform a blocking operation. It treats
+// scope as immutable and must return an error wrapping ErrInvalidExecutionScope
+// when scope has no SessionID. The returned Channel is concurrent-safe and its
+// binding cannot change. Its business routing is determined by the bound scope,
+// never by context values; implementations may use context-carried tracing or
+// observation correlation only as optional metadata that cannot replace or
+// override the explicit scope or change the operation's business result.
+type ExecutionBinder interface {
+	Bind(execution.Scope) (Channel, error)
+}
+
 // Unavailable returns a concurrent-safe Channel with no host facility behind
 // it. Each method returns an already-canceled context error when present and
 // otherwise returns ErrUnavailable. It is suitable for non-interactive hosts
 // that must supply an explicit Channel.
 func Unavailable() Channel { return unavailableChannel{} }
+
+// UnavailableBinder returns a concurrent-safe ExecutionBinder for a host with
+// no interaction facility. Bind rejects a missing SessionID with
+// ErrInvalidExecutionScope; otherwise it returns an Unavailable Channel so the
+// eventual effect call preserves context cancellation and deadline errors.
+func UnavailableBinder() ExecutionBinder { return unavailableExecutionBinder{} }
 
 // Level describes semantic severity without prescribing host behavior.
 type Level uint8
@@ -170,12 +194,27 @@ func StringsValue(value []string) Value {
 	return Value{Kind: ValueStrings, Strings: append([]string(nil), value...)}
 }
 
-// ErrUnavailable indicates that no host facility can service an interaction.
-var ErrUnavailable = errors.New("interaction unavailable")
+var (
+	// ErrUnavailable indicates that no host facility can service an interaction.
+	ErrUnavailable = errors.New("interaction unavailable")
+	// ErrInvalidExecutionScope indicates that an interaction Channel could not
+	// be bound because its explicit dynamic execution scope is invalid.
+	ErrInvalidExecutionScope = errors.New("invalid interaction execution scope")
+)
 
 type unavailableChannel struct{}
 
+type unavailableExecutionBinder struct{}
+
 var _ Channel = unavailableChannel{}
+var _ ExecutionBinder = unavailableExecutionBinder{}
+
+func (unavailableExecutionBinder) Bind(scope execution.Scope) (Channel, error) {
+	if scope.SessionID == "" {
+		return nil, ErrInvalidExecutionScope
+	}
+	return unavailableChannel{}, nil
+}
 
 func (unavailableChannel) Request(ctx context.Context, _ Request) (Response, error) {
 	return Response{}, unavailableError(ctx)
