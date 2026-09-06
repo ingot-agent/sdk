@@ -5,6 +5,8 @@ import (
 	"errors"
 	"sync"
 	"testing"
+
+	"github.com/ingot-agent/sdk/execution"
 )
 
 func TestValueConstructors(t *testing.T) {
@@ -76,4 +78,23 @@ func TestUnavailableChannelConcurrentUse(t *testing.T) {
 		}()
 	}
 	calls.Wait()
+}
+
+func TestUnavailableExecutionBinder(t *testing.T) {
+	binder := UnavailableBinder()
+	if _, err := binder.Bind(execution.Scope{}); !errors.Is(err, ErrInvalidExecutionScope) {
+		t.Fatalf("empty scope error = %v, want ErrInvalidExecutionScope", err)
+	}
+	channel, err := binder.Bind(execution.Scope{SessionID: "session"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := channel.Request(context.Background(), Request{}); !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("request error = %v, want ErrUnavailable", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := channel.Emit(ctx, Event{}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled error = %v, want context.Canceled", err)
+	}
 }

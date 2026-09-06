@@ -78,7 +78,8 @@ it uses.
 |---|---|
 | `pipeline` | Generic typed interceptor composition. |
 | `httpx` | A shared, context-aware HTTP client capability. |
-| `filesystem` | Safe workspace-relative filesystem access. |
+| `execution` | Explicit dynamic execution identity (`execution.Scope`). |
+| `workspace` | Session-scoped local workspace binding (`Resolver`/`Manager`). |
 | `asset` | Immutable binary asset storage and resolution. |
 | `content` | Ordered, provider-neutral multimodal content and attachments. |
 | `tool` | Tool definitions, invocation, runtime lookup, and interception. |
@@ -94,6 +95,14 @@ it uses.
 
 `interaction` describes semantic requests, events, and state. It deliberately
 does not define widgets, layouts, terminal behavior, or rendering.
+`interaction.ExecutionBinder` combines a statically wired host capability with
+an explicit `execution.Scope` to derive a Channel whose execution binding is
+immutable. Plugins use it when interaction effects must follow a runtime
+invocation's Session identity. Context-carried observation correlation may
+enrich tracing or presentation metadata, but it cannot supply or override
+business routing. Non-interactive hosts can provide
+`interaction.UnavailableBinder()` while preserving the same scope validation
+and context cancellation semantics.
 
 `operation` describes the opposite host boundary: an application ingress such
 as a CLI, HTTP service, GUI, or automation controller can discover and invoke
@@ -259,6 +268,35 @@ go test -race ./...
 ## License
 
 [MIT](./LICENSE)
+
+## Execution Scope convention
+
+Correctness-critical execution identity must be represented by public request
+or invocation contracts and must not be communicated through hidden context
+values. `context.Context` carries only cancellation, deadline, and
+tracing/observation implementation detail that cannot change business results.
+Plugin authors do not need to know any context convention that is not written
+in an SDK interface.
+
+Two stable concepts support this:
+
+```text
+Static Dependency Graph
+    → what a Component depends on (typed capability dependency)
+
+Dynamic Execution Scope
+    → which execution domain one invocation belongs to (explicit scope)
+```
+
+`tool.Call` is the durable domain payload of a tool call and can enter model
+messages, session history, and observation. `tool.Invocation` is the runtime
+execution envelope that carries the immutable `execution.Scope` together with
+the domain `tool.Call`. Execution-scoped interaction producers bind their
+Channel through `interaction.ExecutionBinder`; they do not recover Session
+identity from context values. Workspace is a session-scoped capability: one
+Session maps to one immutable local workspace binding, `workspace.Resolver` is
+the execution-side read authority, and `workspace.Manager` is the
+application-side mutation capability. Workspace does not imply sandboxing.
 
 ## Execution semantics v0.3
 

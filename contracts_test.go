@@ -5,23 +5,23 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/fs"
 	"net/http"
 
 	"github.com/ingot-agent/sdk/agent"
 	"github.com/ingot-agent/sdk/asset"
 	"github.com/ingot-agent/sdk/content"
 	"github.com/ingot-agent/sdk/contextwindow"
-	"github.com/ingot-agent/sdk/filesystem"
+	"github.com/ingot-agent/sdk/execution"
 	"github.com/ingot-agent/sdk/httpx"
 	"github.com/ingot-agent/sdk/interaction"
 	"github.com/ingot-agent/sdk/model"
-	"github.com/ingot-agent/sdk/operation"
 	"github.com/ingot-agent/sdk/observation"
+	"github.com/ingot-agent/sdk/operation"
 	"github.com/ingot-agent/sdk/pipeline"
 	"github.com/ingot-agent/sdk/prompt"
 	"github.com/ingot-agent/sdk/session"
 	"github.com/ingot-agent/sdk/tool"
+	"github.com/ingot-agent/sdk/workspace"
 )
 
 // These external-package compile assertions protect the public contracts that
@@ -34,20 +34,6 @@ func (httpClient) Do(context.Context, *http.Request) (*http.Response, error) {
 }
 
 var _ httpx.Client = httpClient{}
-
-type workspaceFS struct{}
-
-func (workspaceFS) ReadFile(context.Context, string) ([]byte, error) { return nil, nil }
-func (workspaceFS) WriteFile(context.Context, string, []byte, fs.FileMode) error {
-	return nil
-}
-func (workspaceFS) ReadDir(context.Context, string) ([]fs.DirEntry, error) { return nil, nil }
-func (workspaceFS) Stat(context.Context, string) (fs.FileInfo, error)      { return nil, nil }
-func (workspaceFS) MkdirAll(context.Context, string, fs.FileMode) error    { return nil }
-func (workspaceFS) Remove(context.Context, string) error                   { return nil }
-func (workspaceFS) Rename(context.Context, string, string) error           { return nil }
-
-var _ filesystem.FS = workspaceFS{}
 
 type assetStore struct{}
 
@@ -69,7 +55,7 @@ var (
 type toolImplementation struct{}
 
 func (toolImplementation) Definition() tool.Definition { return tool.Definition{} }
-func (toolImplementation) Invoke(context.Context, tool.Call) (tool.Result, error) {
+func (toolImplementation) Invoke(context.Context, tool.Invocation) (tool.Result, error) {
 	return tool.Result{}, nil
 }
 
@@ -78,7 +64,7 @@ var _ tool.Tool = toolImplementation{}
 type toolRuntime struct{}
 
 func (toolRuntime) Definitions() []tool.Definition { return nil }
-func (toolRuntime) Call(context.Context, tool.Call) (tool.Result, error) {
+func (toolRuntime) Call(context.Context, tool.Invocation) (tool.Result, error) {
 	return tool.Result{}, nil
 }
 
@@ -195,6 +181,15 @@ func (channel) Clear(context.Context, string) error           { return nil }
 
 var _ interaction.Channel = channel{}
 
+type executionBinder struct{}
+
+func (executionBinder) Bind(scope execution.Scope) (interaction.Channel, error) {
+	_ = scope.SessionID
+	return channel{}, nil
+}
+
+var _ interaction.ExecutionBinder = executionBinder{}
+
 var _ = interaction.Request{
 	Name:        "continue",
 	Description: "Continue?",
@@ -266,10 +261,10 @@ type toolInterceptor struct{}
 
 func (toolInterceptor) Invoke(
 	ctx context.Context,
-	call tool.Call,
-	next pipeline.Next[tool.Call, tool.Result],
+	invocation tool.Invocation,
+	next pipeline.Next[tool.Invocation, tool.Result],
 ) (tool.Result, error) {
-	return next(ctx, call)
+	return next(ctx, invocation)
 }
 
 var _ tool.Interceptor = toolInterceptor{}
@@ -310,3 +305,33 @@ func (agentInterceptor) Invoke(
 }
 
 var _ agent.Interceptor = agentInterceptor{}
+
+type workspaceResolver struct{}
+
+func (workspaceResolver) Resolve(context.Context, execution.Scope) (workspace.Binding, error) {
+	return workspace.Binding{}, nil
+}
+
+var _ workspace.Resolver = workspaceResolver{}
+
+type workspaceManager struct{}
+
+func (workspaceManager) Assign(context.Context, session.ID, workspace.Binding) error {
+	return nil
+}
+
+var _ workspace.Manager = workspaceManager{}
+
+// toolEnvelope tests that a Tool, Runtime, and Interceptor implementation can
+// read the execution scope and the durable call payload through the public
+// invocation envelope without any hidden context requirement.
+type toolEnvelope struct{}
+
+func (toolEnvelope) Definition() tool.Definition { return tool.Definition{} }
+func (toolEnvelope) Invoke(_ context.Context, invocation tool.Invocation) (tool.Result, error) {
+	_ = invocation.Scope.SessionID
+	_ = invocation.Call.Name
+	return tool.Result{}, nil
+}
+
+var _ tool.Tool = toolEnvelope{}
