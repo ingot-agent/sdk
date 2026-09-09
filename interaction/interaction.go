@@ -71,7 +71,7 @@ type Request struct {
 	Fields      []Field
 }
 
-// FieldKind identifies the primitive value contract of a request field.
+// FieldKind identifies the value contract of a request field.
 type FieldKind uint8
 
 const (
@@ -81,12 +81,27 @@ const (
 	FieldBoolean
 	FieldChoice
 	FieldMultiChoice
+	// FieldObject requests a nested group of named fields. The group's
+	// members are described by Field.Fields; the collected answer is a
+	// ValueObject.
+	FieldObject
+	// FieldList requests an ordered, possibly empty repetition of one
+	// element descriptor. The element contract is described by
+	// Field.Element; the collected answer is a ValueList. A list element may
+	// itself be an object or another list, which is how repeated nested
+	// structures are expressed without inventing per-plugin protocols.
+	FieldList
 )
 
 // Field describes one value requested from the host. Name is machine-facing;
 // Label and Description are human-facing metadata. Options on FieldString are
 // ordered suggestions and do not restrict free-form answers. Options on
 // FieldChoice and FieldMultiChoice define the allowed values.
+//
+// Fields is set exactly for FieldObject and describes the group's members in
+// presentation order. Element is set exactly for FieldList and describes one
+// repeated element. Both may nest arbitrarily deep; a host must therefore
+// render and validate recursively rather than assuming a flat form.
 type Field struct {
 	Name        string
 	Label       string
@@ -98,6 +113,9 @@ type Field struct {
 
 	Default *Value
 	Options []Option
+
+	Fields  []Field
+	Element *Field
 }
 
 // Option describes one ordered choice. Value is the stable protocol value;
@@ -145,7 +163,7 @@ type Entry struct {
 	Value       Value
 }
 
-// ValueKind identifies one primitive interaction value representation.
+// ValueKind identifies one interaction value representation.
 type ValueKind uint8
 
 const (
@@ -154,10 +172,19 @@ const (
 	ValueNumber
 	ValueBoolean
 	ValueStrings
+	// ValueObject carries one nested group value. Entries holds the group
+	// members and is authoritative; the scalar fields are ignored.
+	ValueObject
+	// ValueList carries one ordered repetition. Items holds the elements and
+	// is authoritative; the scalar fields are ignored.
+	ValueList
 )
 
-// Value carries one primitive interaction value. The field selected by Kind
-// is authoritative; all other representation fields are ignored.
+// Value carries one interaction value. The field selected by Kind is
+// authoritative; all other representation fields are ignored.
+//
+// ValueObject and ValueList nest recursively, so a value tree mirrors the
+// requesting Field tree one-to-one.
 type Value struct {
 	Kind ValueKind
 
@@ -166,6 +193,21 @@ type Value struct {
 	Number  float64
 	Boolean bool
 	Strings []string
+
+	Entries []Entry
+	Items   []Value
+}
+
+// ObjectValue constructs a ValueObject value. Entries are copied so
+// subsequent caller mutation cannot change the returned Value.
+func ObjectValue(entries []Entry) Value {
+	return Value{Kind: ValueObject, Entries: append([]Entry(nil), entries...)}
+}
+
+// ListValue constructs a ValueList value. Items are copied so subsequent
+// caller mutation cannot change the returned Value.
+func ListValue(items []Value) Value {
+	return Value{Kind: ValueList, Items: append([]Value(nil), items...)}
 }
 
 // StringValue constructs a string Value.

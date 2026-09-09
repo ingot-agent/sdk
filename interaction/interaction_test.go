@@ -36,6 +36,56 @@ func TestValueConstructors(t *testing.T) {
 	}
 }
 
+func TestNestedValueConstructorsCopyInputs(t *testing.T) {
+	entries := []Entry{{Name: "host", Value: StringValue("example.com")}}
+	object := ObjectValue(entries)
+	if object.Kind != ValueObject || len(object.Entries) != 1 {
+		t.Fatalf("object value = %#v", object)
+	}
+	entries[0] = Entry{Name: "changed"}
+	if object.Entries[0].Name != "host" {
+		t.Fatalf("ObjectValue retained caller slice: %#v", object.Entries)
+	}
+
+	items := []Value{StringValue("first")}
+	list := ListValue(items)
+	if list.Kind != ValueList || len(list.Items) != 1 {
+		t.Fatalf("list value = %#v", list)
+	}
+	items[0] = StringValue("changed")
+	if list.Items[0].String != "first" {
+		t.Fatalf("ListValue retained caller slice: %#v", list.Items)
+	}
+}
+
+// TestNestedFieldModelSupportsRepeatedObjects models the shape official
+// plugins actually need: a repeated group whose members are themselves
+// grouped, for example a provider list with per-provider model entries.
+func TestNestedFieldModelSupportsRepeatedObjects(t *testing.T) {
+	provider := Field{
+		Name: "provider", Kind: FieldObject, Required: true,
+		Fields: []Field{
+			{Name: "name", Kind: FieldString, Required: true},
+			{Name: "models", Kind: FieldList, Element: &Field{Name: "model", Kind: FieldString}},
+			{Name: "auth", Kind: FieldObject, Fields: []Field{
+				{Name: "token", Kind: FieldString, Sensitive: true},
+			}},
+		},
+	}
+	request := Request{Name: "example.setup", Fields: []Field{{Name: "providers", Kind: FieldList, Element: &provider}}}
+	if request.Fields[0].Element.Kind != FieldObject || len(request.Fields[0].Element.Fields) != 3 {
+		t.Fatalf("repeated object descriptor = %#v", request.Fields[0].Element)
+	}
+	value := ListValue([]Value{ObjectValue([]Entry{
+		{Name: "name", Value: StringValue("openai")},
+		{Name: "models", Value: ListValue([]Value{StringValue("gpt-4o-mini")})},
+		{Name: "auth", Value: ObjectValue([]Entry{{Name: "token", Value: StringValue("secret")}})},
+	})})
+	if value.Kind != ValueList || value.Items[0].Kind != ValueObject {
+		t.Fatalf("nested value tree = %#v", value)
+	}
+}
+
 func TestUnavailableChannel(t *testing.T) {
 	channel := Unavailable()
 	operations := []struct {
