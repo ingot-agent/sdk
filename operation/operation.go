@@ -26,9 +26,15 @@ import (
 // a JSON object; an omitted $schema keyword is interpreted as Draft 2020-12.
 // Values returned by Operation.Definition are caller-owned snapshots,
 // including both schema byte slices.
+//
+// Group is a pure presentation hint chosen by the producing Plugin. The SDK
+// only provides the slot and never interprets it; hosts may use it to organize
+// operations in a UI and must tolerate an empty value, which means
+// "ungrouped". Operation identity never depends on Group.
 type Definition struct {
 	Name         string
 	Description  string
+	Group        string
 	InputSchema  json.RawMessage
 	OutputSchema json.RawMessage
 }
