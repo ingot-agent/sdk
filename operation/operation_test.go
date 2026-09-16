@@ -14,7 +14,8 @@ type echoOperation struct{}
 
 func (echoOperation) Definition() operation.Definition {
 	return operation.Definition{
-		Name:         "example.echo",
+		Group:        "example",
+		Name:         "echo",
 		Description:  "Return the supplied value.",
 		InputSchema:  json.RawMessage(`{"type":"object","additionalProperties":false,"required":["value"],"properties":{"value":{"type":"string"}}}`),
 		OutputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["value"],"properties":{"value":{"type":"string"}}}`),

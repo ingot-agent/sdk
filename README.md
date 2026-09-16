@@ -106,8 +106,9 @@ and context cancellation semantics.
 
 `operation` describes the opposite host boundary: an application ingress such
 as a CLI, HTTP service, GUI, or automation controller can discover and invoke
-the operations contributed by plugins. Each operation has a stable name,
-Draft 2020-12 JSON object schemas, a structured request and result, and a
+the operations contributed by plugins. Each operation has a stable Plugin
+Group and a local Name; the pair is its external identity. Definitions also
+carry Draft 2020-12 JSON object schemas, a structured request and result, and a
 call-scoped `interaction.Channel`. Transport syntax, authentication,
 authorization, routing, and presentation remain owned by the ingress.
 

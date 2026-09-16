@@ -217,7 +217,8 @@ type operationImplementation struct{}
 
 func (operationImplementation) Definition() operation.Definition {
 	return operation.Definition{
-		Name:         "session.inspect",
+		Group:        "session",
+		Name:         "inspect",
 		Description:  "Inspect one session.",
 		InputSchema:  json.RawMessage(`{"type":"object"}`),
 		OutputSchema: json.RawMessage(`{"type":"object"}`),

@@ -18,19 +18,17 @@ import (
 	"github.com/ingot-agent/sdk/session"
 )
 
-// Definition describes one externally invocable operation. Name is its stable
-// lowercase ASCII protocol identity. It matches
-// ^[a-z][a-z0-9]*([._-][a-z0-9]+)*$ and does not include transport syntax such
-// as a leading slash or an HTTP path. Description is non-empty UTF-8 text.
+// Definition describes one externally invocable operation. Group is the
+// producing Plugin's stable lowercase ASCII command namespace and matches
+// ^[a-z][a-z0-9-]{0,47}$. Name is the operation's local identity inside Group
+// and matches ^[a-z][a-z0-9-]{0,31}$. Neither includes transport syntax such
+// as a leading slash, whitespace, dots, or an HTTP path. The pair (Group,
+// Name) is the stable externally visible identity. Description is non-empty
+// UTF-8 text.
 // InputSchema and OutputSchema use JSON Schema Draft 2020-12 and each describes
 // a JSON object; an omitted $schema keyword is interpreted as Draft 2020-12.
 // Values returned by Operation.Definition are caller-owned snapshots,
 // including both schema byte slices.
-//
-// Group is a pure presentation hint chosen by the producing Plugin. The SDK
-// only provides the slot and never interprets it; hosts may use it to organize
-// operations in a UI and must tolerate an empty value, which means
-// "ungrouped". Operation identity never depends on Group.
 type Definition struct {
 	Name         string
 	Description  string
