@@ -76,7 +76,14 @@ func (modelProvider) Complete(context.Context, model.Request) (model.Response, e
 	return model.Response{}, nil
 }
 
-var _ model.Provider = modelProvider{}
+type modelProviderSource struct{}
+
+func (modelProviderSource) Snapshot(context.Context) ([]model.ProviderEntry, error) {
+	provider := streamingProvider{}
+	return []model.ProviderEntry{{Name: "provider", Complete: provider.Complete, Stream: provider.Stream}}, nil
+}
+
+var _ model.ProviderSource = modelProviderSource{}
 
 type streamingProvider struct{ modelProvider }
 
@@ -87,8 +94,6 @@ func (streamingProvider) Stream(
 ) (model.Response, error) {
 	return model.Response{}, nil
 }
-
-var _ model.StreamingProvider = streamingProvider{}
 
 type modelRuntime struct{ streamingProvider }
 

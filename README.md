@@ -83,7 +83,7 @@ it uses.
 | `asset` | Immutable binary asset storage and resolution. |
 | `content` | Ordered, provider-neutral multimodal content and attachments. |
 | `tool` | Tool definitions, invocation, runtime lookup, and interception. |
-| `model` | Model providers, complete/part-streaming runtimes, request resolution, provider-reported usage, and interception. |
+| `model` | Model providers and live provider sources, complete/part-streaming runtimes, request resolution, provider-reported usage, and interception. |
 | `session` | Opaque session persistence, lifecycle management, and discovery. |
 | `prompt` | Prompt contribution and rendering. |
 | `contextwindow` | Model-context compaction. |
@@ -201,6 +201,16 @@ func New(
 There is no service locator or global registration API. The ingot Builder reads
 the component's types, resolves the static graph, and generates the constructor
 calls.
+
+Model plugins export `model.ProviderSource` rather than a static collection of
+providers. Consumers inject `[]model.ProviderSource` and read `Snapshot(ctx)`
+when they need the current directory. The component graph stays static while
+provider configuration can change without rebuilding the graph or restarting.
+Each `model.ProviderEntry` contains a `Name`, a required `Complete` function,
+and an optional `Stream` function. Names must be unique across the consumer's
+sources. Snapshot slices belong to the caller; invocation functions remain
+bound to the same immutable configuration and usable for the source's lifetime
+even after replacement. Fixed configurations use the same source contract.
 
 ## Contract conventions
 

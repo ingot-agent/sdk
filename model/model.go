@@ -60,12 +60,33 @@ type Response struct {
 	Model        string
 }
 
-// Provider completes model requests. Implementations are safe for concurrent
-// requests. A Response is authoritative only when the returned error is nil;
-// an error does not imply that generation, billing, or other provider effects
-// did not occur or that retrying is safe.
-type Provider interface {
-	Complete(context.Context, Request) (Response, error)
+// ProviderEntry names a provider's invocation functions. Name must be non-empty
+// and valid UTF-8, and unique across the sources used by a consumer. Complete
+// is required; a nil Stream means streaming is unsupported.
+//
+// Both functions are safe for concurrent calls and bound to the same immutable
+// configuration. Inputs are immutable; aggregate outputs belong to the caller.
+// A Response is authoritative only when the returned error is nil. An error
+// does not imply that provider-side effects did not occur or that retrying is
+// safe. Stream events before an error are transient, not a canonical response.
+type ProviderEntry struct {
+	Name     string
+	Complete func(context.Context, Request) (Response, error)
+	Stream   StreamNext
+}
+
+// ProviderSource exposes the current provider entries of a statically wired
+// capability. Snapshot is safe for concurrent calls and returns a consistent,
+// caller-owned slice in deterministic order. An empty slice means no providers
+// are configured. A non-nil error makes the returned slice unusable.
+//
+// Replacing or removing an entry affects later snapshots only. Previously
+// returned functions remain usable for the lifetime of the source, including
+// completion of requests and streams already in progress. Consumers retain one
+// snapshot throughout each invocation and reject duplicate names instead of
+// silently choosing one provider.
+type ProviderSource interface {
+	Snapshot(context.Context) ([]ProviderEntry, error)
 }
 
 // Runtime selects a named provider and executes complete requests through its
@@ -101,8 +122,8 @@ const (
 type StreamSemantic uint8
 
 const (
-	// StreamSemanticContent is ordinary response content. Its zero value keeps
-	// existing providers compatible.
+	// StreamSemanticContent is ordinary response content and the default
+	// semantic of a stream event.
 	StreamSemanticContent StreamSemantic = iota
 	// StreamSemanticReasoning is provider-explicit reasoning/thinking text.
 	// It is transient and does not enter Response.Message.Content.
@@ -134,14 +155,6 @@ type StreamEvent struct {
 // error stops streaming immediately and that error is propagated unchanged.
 type StreamHandler func(StreamEvent) error
 
-// StreamingProvider is a provider capable of both complete and streaming
-// requests. A Response is authoritative only when Stream returns nil. Events
-// delivered before an error are transient progress, not a canonical response.
-type StreamingProvider interface {
-	Provider
-	Stream(context.Context, Request, StreamHandler) (Response, error)
-}
-
 // StreamingRuntime selects a named streaming provider and executes requests
 // through the streaming interceptor chain. A Response is authoritative only
 // when the returned error is nil. Delivered events are transient progress and
@@ -150,7 +163,7 @@ type StreamingRuntime interface {
 	Stream(context.Context, Request, StreamHandler) (Response, error)
 }
 
-// StreamNext is the next operation in a streaming interceptor chain.
+// StreamNext invokes a streaming provider or the next streaming interceptor.
 type StreamNext func(
 	context.Context,
 	Request,
