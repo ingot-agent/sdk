@@ -84,11 +84,11 @@ it uses.
 | `content` | Ordered, provider-neutral multimodal content and attachments. |
 | `tool` | Tool definitions, invocation, runtime lookup, and interception. |
 | `model` | Model providers and live provider sources, complete/part-streaming runtimes, request resolution, provider-reported usage, and interception. |
-| `session` | Opaque session persistence, lifecycle management, and discovery. |
+| `session` | Opaque session persistence, namespaced metadata, lifecycle management, and discovery. |
 | `prompt` | Prompt contribution and rendering. |
 | `contextwindow` | Model-context compaction. |
 | `usage` | Model-aware input counting with explicit accuracy. |
-| `agent` | Agent turn execution and outcome accounting, reasoning/output streaming, history access, and interception. |
+| `agent` | Agent turn execution, single-Turn child-agent management, outcome accounting, reasoning/output streaming, history access, and interception. |
 | `observation` | Passive, correlated Turn/Round/Model/Tool execution facts. |
 | `interaction` | Presentation-neutral structured effects between plugins and a host environment. |
 | `operation` | Externally invocable, transport-neutral plugin operations. |

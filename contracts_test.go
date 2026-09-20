@@ -135,6 +135,34 @@ var (
 	_ session.Query   = store{}
 )
 
+var _ = session.CreateRequest{
+	Depth: 1,
+	Meta:  session.Meta{agent.AgentMetaNamespace: json.RawMessage(`{}`)},
+}
+
+type childRepository struct{}
+
+func (childRepository) CreateChild(context.Context, agent.ChildSessionCreateRequest) (agent.ChildSessionRecord, error) {
+	return agent.ChildSessionRecord{}, nil
+}
+func (childRepository) GetChildSession(context.Context, session.ID) (agent.ChildSessionRecord, error) {
+	return agent.ChildSessionRecord{}, nil
+}
+func (childRepository) ListChildSessions(context.Context, session.ID, agent.ChildSessionPageRequest) (agent.ChildSessionPage, error) {
+	return agent.ChildSessionPage{}, nil
+}
+func (childRepository) UpdateChildSession(context.Context, session.ID, agent.ChildSessionUpdate) (agent.ChildSessionRecord, bool, error) {
+	return agent.ChildSessionRecord{}, false, nil
+}
+func (childRepository) UpdateChildBranch(context.Context, session.ID, agent.ChildBranchRequest) ([]agent.ChildSessionRecord, error) {
+	return nil, nil
+}
+func (childRepository) RecoverChildSessions(context.Context, agent.ChildRecoveryRequest) error {
+	return nil
+}
+
+var _ agent.ChildSessionRepository = childRepository{}
+
 type contributor struct{}
 
 func (contributor) Contribute(context.Context, prompt.Request) ([]prompt.Block, error) {
@@ -248,6 +276,32 @@ func (agentRuntime) Run(context.Context, agent.Turn) (agent.Execution, error) {
 }
 
 var _ agent.Runtime = agentRuntime{}
+
+type children struct{}
+
+func (children) Types(context.Context, execution.Scope) ([]agent.AgentTypeInfo, error) {
+	return nil, nil
+}
+func (children) CreateChild(context.Context, execution.Scope, agent.ChildRequest) (agent.ChildSnapshot, error) {
+	return agent.ChildSnapshot{}, nil
+}
+func (children) Check(context.Context, execution.Scope, session.ID, bool) (agent.ChildSnapshot, error) {
+	return agent.ChildSnapshot{}, nil
+}
+func (children) Wait(context.Context, execution.Scope, session.ID) (agent.ChildSnapshot, error) {
+	return agent.ChildSnapshot{}, nil
+}
+func (children) List(context.Context, execution.Scope, agent.ChildrenPageRequest) (agent.ChildrenPage, error) {
+	return agent.ChildrenPage{}, nil
+}
+func (children) Cancel(context.Context, execution.Scope, session.ID) (agent.CancelResult, error) {
+	return agent.CancelResult{}, nil
+}
+func (children) SubmitResult(context.Context, execution.Scope, string, string) error {
+	return nil
+}
+
+var _ agent.Children = children{}
 
 type observationConsumer struct{}
 
