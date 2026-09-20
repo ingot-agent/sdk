@@ -4,6 +4,7 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 )
@@ -11,6 +12,12 @@ import (
 // ID is the stable identity of one session. Store implementations create IDs;
 // callers must not assume that an arbitrary ID is a valid persistent identity.
 type ID string
+
+// Meta is a namespaced JSON object attached to one Session. Each top-level
+// key is owned by one capability or plugin. Implementations must preserve
+// namespaces they do not own. Values are immutable by contract; callers must
+// copy bytes they retain and implementations return caller-owned bytes.
+type Meta map[string]json.RawMessage
 
 // Metadata describes the authoritative lifecycle state of one session.
 // CreatedAt is the successful creation time. UpdatedAt is the time of the last
@@ -23,6 +30,7 @@ type Metadata struct {
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	ArchivedAt *time.Time
+	Meta       Meta
 }
 
 // Entry is an opaque, durable, versioned persistence record. Version identifies
@@ -39,6 +47,13 @@ type Entry struct {
 // Store creates its ID and timestamps.
 type CreateRequest struct {
 	Title string
+	// Depth selects the cN_ identity prefix for a newly generated Session ID.
+	// Zero is the normal root-session depth. Implementations must reject values
+	// they cannot represent rather than silently truncating them.
+	Depth uint32
+	// Meta is committed atomically with the new Session row. A nil value is an
+	// empty metadata object.
+	Meta Meta
 }
 
 // ForkRequest describes caller-controlled properties of a fork target. An
