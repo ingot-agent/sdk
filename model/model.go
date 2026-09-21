@@ -21,6 +21,39 @@ const (
 	RoleTool      Role = "tool"
 )
 
+// ReasoningEffort selects how much reasoning a capable model performs. The
+// empty value leaves the choice to the provider.
+type ReasoningEffort string
+
+const (
+	ReasoningEffortNone    ReasoningEffort = "none"
+	ReasoningEffortMinimal ReasoningEffort = "minimal"
+	ReasoningEffortLow     ReasoningEffort = "low"
+	ReasoningEffortMedium  ReasoningEffort = "medium"
+	ReasoningEffortHigh    ReasoningEffort = "high"
+	ReasoningEffortXHigh   ReasoningEffort = "xhigh"
+)
+
+// Valid reports whether the value is an explicit supported reasoning effort.
+// The empty value is reserved for provider-default behavior in Request.
+func (e ReasoningEffort) Valid() bool {
+	switch e {
+	case ReasoningEffortNone, ReasoningEffortMinimal, ReasoningEffortLow, ReasoningEffortMedium, ReasoningEffortHigh, ReasoningEffortXHigh:
+		return true
+	default:
+		return false
+	}
+}
+
+// ModelEntry describes one model exposed by a provider. Name must be non-empty
+// and valid UTF-8. ReasoningEfforts is the ordered set of explicit values
+// accepted for that model; each value must be valid and unique. An empty set
+// means the provider does not expose configurable reasoning effort.
+type ModelEntry struct {
+	Name             string
+	ReasoningEfforts []ReasoningEffort
+}
+
 // Message is an ordered multimodal or tool-calling conversation message.
 type Message struct {
 	Role       Role
@@ -32,14 +65,19 @@ type Message struct {
 
 // Request is one model invocation. Provider chooses a named provider instance;
 // Model chooses a model exposed by that provider.
+//
+// ReasoningEffort optionally selects how much reasoning the model performs. An
+// empty value leaves the choice to the provider; a non-empty value must be one
+// of the ReasoningEffort constants and must be supported by the selected model.
 type Request struct {
-	Provider    string
-	Model       string
-	Messages    []Message
-	Tools       []tool.Definition
-	Temperature *float64
-	MaxTokens   *int
-	Stop        []string
+	Provider        string
+	Model           string
+	Messages        []Message
+	Tools           []tool.Definition
+	Temperature     *float64
+	MaxTokens       *int
+	Stop            []string
+	ReasoningEffort ReasoningEffort
 }
 
 // Usage reports token counts for a model response. Reported distinguishes an
@@ -60,9 +98,16 @@ type Response struct {
 	Model        string
 }
 
-// ProviderEntry names a provider's invocation functions. Name must be non-empty
-// and valid UTF-8, and unique across the sources used by a consumer. Complete
-// is required; a nil Stream means streaming is unsupported.
+// ProviderEntry names a provider's models and invocation functions. Name must
+// be non-empty and valid UTF-8, and unique across the sources used by a
+// consumer. Complete is required; a nil Stream means streaming is unsupported.
+//
+// Models is the provider's model directory in declaration order. Model names
+// must be non-empty, valid UTF-8, and unique within the entry, and each
+// reasoning effort must be valid and unique within its model. Consumers use
+// the directory to constrain model and reasoning-effort selection. An empty
+// Models slice means the provider does not expose a closed model directory, so
+// consumers cannot validate model or reasoning-effort choices for that entry.
 //
 // Both functions are safe for concurrent calls and bound to the same immutable
 // configuration. Inputs are immutable; aggregate outputs belong to the caller.
@@ -71,6 +116,7 @@ type Response struct {
 // safe. Stream events before an error are transient, not a canonical response.
 type ProviderEntry struct {
 	Name     string
+	Models   []ModelEntry
 	Complete func(context.Context, Request) (Response, error)
 	Stream   StreamNext
 }
@@ -191,4 +237,7 @@ var (
 	// ErrModelNotFound indicates that the selected provider does not expose the
 	// requested model.
 	ErrModelNotFound = errors.New("model not found")
+	// ErrReasoningEffortUnsupported indicates that the selected model does not
+	// accept the requested reasoning effort.
+	ErrReasoningEffortUnsupported = errors.New("reasoning effort unsupported")
 )
