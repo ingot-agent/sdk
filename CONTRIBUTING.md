@@ -11,9 +11,9 @@ feedback are welcome.
   request.
 - Discuss new capabilities, public API changes, and breaking semantic changes
   with the maintainers before investing in an implementation.
-- Do not report security vulnerabilities in a public issue. Use the
-  repository's private security reporting channel, or contact a maintainer
-  privately if that channel is unavailable.
+- Follow [SECURITY.md](SECURITY.md) for vulnerability reporting and the current
+  channel availability. Never put vulnerability details or secrets in a public
+  issue.
 
 ## Decide whether the contract belongs here
 
@@ -33,7 +33,8 @@ Before proposing a new capability, answer these questions:
 
 If the answer is no, keep the contract in the owning plugin. When multiple
 plugins in one domain need to interoperate, create a separately versioned
-domain SDK that ingot can configure alongside this one.
+domain SDK that those plugins import directly. Contract modules participate
+through ordinary Go type identity; ingot has no separate SDK configuration.
 
 Do not add UI widgets, rendering or layout models, terminal behavior,
 frontend-framework state, coding workflows, customer-service schemas, or other
@@ -60,6 +61,9 @@ git switch -c feat/short-description
 - Avoid new dependencies unless a public contract genuinely requires them.
 - Update package documentation and the README when public behavior or SDK scope
   changes.
+- Update [CHANGELOG.md](CHANGELOG.md) and [docs/MIGRATIONS.md](docs/MIGRATIONS.md)
+  when consumers need a new dependency version or integration changes. Record
+  new work as Unreleased until its actual tag is verified.
 - Do not include secrets, local configuration, IDE metadata, build artifacts,
   or unrelated formatting changes.
 
@@ -76,11 +80,18 @@ race-enabled suite required before every commit:
 
 ```sh
 go test -race ./...
+go vet ./...
 git diff --check
 ```
 
 If required validation cannot run or does not pass, document the blocker and
 do not present the change as ready to merge.
+
+Run module validation with `GOWORK=off` when a parent development workspace is
+present. Also validate affected consumers against the exact selected SDK tag;
+local workspace replacements do
+not prove that a release is downloadable or that its module requirements are
+sufficient.
 
 ### 4. Commit clearly
 
@@ -125,4 +136,5 @@ unless it has been coordinated with the reviewers.
 ## License
 
 By submitting a contribution, you agree that it may be distributed under the
-repository's [MIT License](./LICENSE).
+repository's [Apache License 2.0](./LICENSE). Migrated historical design text
+retains its original MIT notice under `docs/design-history/`.
