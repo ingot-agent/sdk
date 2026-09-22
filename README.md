@@ -132,9 +132,11 @@ Runtime-facing contracts previously published by this module have moved to
   and `ingot-abi/lifecycle.Controller` dependencies;
 - replace `config.StateDir` context lookup with an explicit
   `ingot-abi/state.Scope` dependency; and
-- remove calls to `config.ResolveTables` and `config.Decode`; the Builder and
-  generated Runtime Image own strict decoding and pass the component's typed
-  configuration value to its constructor.
+- remove calls to `config.ResolveTables` and `config.Decode`, and remove the
+  `Config` constructor argument. Components use
+  `New(ctx context.Context, deps Dependencies) (Exports, ingotabi.Cleanup, error)`.
+  Each plugin loads, validates and persists its own settings through its
+  injected `state.Scope`; the Builder does not decode a global runtime config.
 
 The ABI repository is fixed infrastructure shared by the Builder and generated
 Runtime Images. This SDK remains an optional collection of agent capability
@@ -142,26 +144,38 @@ contracts.
 
 ## Multimodal v0.2 contracts
 
-SDK v0.2 uses `content.Content` as the ordered content value shared by model,
-tool, prompt, and agent results. Text, image, audio, video, and file parts can
+The current SDK uses `content.Content`, introduced in v0.2, as the ordered
+content value shared by model, tool, prompt, and agent results. Text, image,
+audio, video, and file parts can
 use inline bytes, a URI, or an opaque immutable `asset.Reference`; concrete
 providers remain authoritative for modality, source, MIME, role, and size
 support.
 
-The same release changes `session.Entry.Payload` to opaque `[]byte`, replaces
-text-only stream chunks with part start/delta/end events, adds ordered agent
-attachments, and exposes optional read-only model capability resolution. These
-are breaking contract changes from v0.1 and consumers must migrate as one Go
-module graph.
+That migration changed `session.Entry.Payload` to opaque `[]byte`, replaced
+text-only stream chunks with part start/delta/end events, added ordered agent
+attachments, and initially exposed read-only model capability resolution. That
+metadata API was subsequently removed; see [execution semantics](#execution-semantics-v024).
+These are breaking changes from v0.1; consumers must migrate as one Go module
+graph. Milestone headings describe contract evolution, not published module tags.
 
 ## Using the standard SDK
 
 Requires Go 1.24 or newer.
 
+Read the [versioned changelog](CHANGELOG.md) and
+[migration guide](docs/MIGRATIONS.md) before changing dependency versions. The
+[documentation index](docs/README.md) links current guidance and design history.
+Historical `v0.x` patch releases include breaking API and semantic changes.
+
 ```sh
-go get github.com/ingot-agent/sdk@latest
+go get github.com/ingot-agent/sdk@v0.2.11
 go get github.com/ingot-agent/ingot-abi@v0.1.0
 ```
+
+The SDK pin above is the source version covered by these docs; verify its
+availability from your release environment. Only ingot components using host
+contracts need the separate ABI dependency, whose version must match the
+selected Core. A program using only SDK capabilities needs only the SDK.
 
 Capabilities are ordinary Go interfaces and values. A component declares only
 what it consumes and provides:
@@ -177,8 +191,6 @@ import (
 	"github.com/ingot-agent/sdk/tool"
 )
 
-type Config struct{}
-
 type Dependencies struct {
 	Model model.Runtime
 	Tools tool.Runtime
@@ -191,7 +203,6 @@ type Exports struct {
 
 func New(
 	ctx context.Context,
-	cfg Config,
 	deps Dependencies,
 ) (Exports, ingotabi.Cleanup, error) {
 	return Exports{}, nil, nil
@@ -265,7 +276,8 @@ of expanding this one.
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for scope checks, development workflow,
-testing requirements, and pull request expectations.
+testing requirements, and pull request expectations. Follow
+[SECURITY.md](SECURITY.md) for vulnerability reporting and channel availability.
 
 ## Development
 
@@ -277,7 +289,8 @@ go test -race ./...
 
 ## License
 
-[MIT](./LICENSE)
+[Apache License 2.0](./LICENSE). The [migrated historical design](docs/design-history/README.md)
+retains its original MIT notice.
 
 ## Execution Scope convention
 
@@ -308,9 +321,10 @@ Session maps to one immutable local workspace binding, `workspace.Resolver` is
 the execution-side read authority, and `workspace.Manager` is the
 application-side mutation capability. Workspace does not imply sandboxing.
 
-## Execution semantics v0.3
+## Execution semantics (v0.2.4)
 
-Milestone 3 treats model streaming as an incremental-delivery optimization.
+The former v0.3 design milestone was implemented in module tag v0.2.4. It
+treats model streaming as an incremental-delivery optimization.
 The model capability metadata APIs introduced in v0.2
 (`CapabilityRequest`, `ContentCapability`, `Capabilities`,
 `CapabilityResolver`, `CapabilityProvider`, and
@@ -334,7 +348,9 @@ tool calls without rolling back completed effects. Nil handlers return
 unavailable, and a successful stream may deliver zero events. Any event already
 delivered is transient progress rather than a canonical result if Stream fails.
 
-## Execution outcome and accounting v0.4
+## Execution outcome and accounting (v0.2.5)
+
+The former v0.4 design milestone was implemented in module tag v0.2.5.
 
 `agent.Runtime.Run` and `agent.StreamingRuntime.Stream` return an
 `agent.Execution`. A successful execution contains a canonical `Result`; once
@@ -356,6 +372,24 @@ Part indices are contiguous from zero independently for each semantic, allowing
 reasoning and content to interleave without changing canonical content indices.
 Only start events carry `PartKind`, `MIMEType`, and `Name`.
 
-When developing this SDK together with an adjacent `ingot-agent` checkout, run
-`go work use ../sdk` from that checkout to compile plugins against these local
-contracts. Published plugin modules must use an SDK release containing them.
+To verify local SDK changes with the six model-related consumers, run
+`tools/test-local-sdk.sh /absolute/path/to/sdk` from a plugins checkout (Bash
+required). That helper creates a temporary workspace without changing repository
+dependency files. Other affected consumers, including child-agent plugins, need
+their own checks. Published modules must use an SDK release containing their
+required contracts and pass checks with `GOWORK=off`.
+
+## Child-agent contracts
+
+[`agent/children.go`](agent/children.go) defines `agent.Children` management and
+child-aware persistence contracts. Operations take an `execution.Scope`, which
+implementations use for caller authorization. One child Session represents one
+Turn. Persisted business state and whether execution has stopped are separate
+facts. Workspace bindings reference existing directories; these contracts do
+not create or remove Git worktrees.
+
+Concrete definitions, tool allowlists, scheduling and recovery belong to
+[agent-default](https://github.com/ingot-agent/plugins/blob/main/agent-default/README.md),
+while the tool surface belongs to
+[tool-subagent](https://github.com/ingot-agent/plugins/blob/main/tool-subagent/README.md).
+The SDK owns their contract semantics, not implementation policy.
