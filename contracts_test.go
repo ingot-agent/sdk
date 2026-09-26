@@ -140,6 +140,10 @@ var _ = session.CreateRequest{
 	Meta:  session.Meta{agent.AgentMetaNamespace: json.RawMessage(`{}`)},
 }
 
+var _ = session.ForkRequest{
+	Meta: session.Meta{"app-webui": json.RawMessage(`{}`)},
+}
+
 type childRepository struct{}
 
 func (childRepository) CreateChild(context.Context, agent.ChildSessionCreateRequest) (agent.ChildSessionRecord, error) {
