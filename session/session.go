@@ -57,9 +57,11 @@ type CreateRequest struct {
 }
 
 // ForkRequest describes caller-controlled properties of a fork target. An
-// empty Title copies the source title.
+// empty Title copies the source title. Meta belongs to the target and is not
+// inherited from the source; a nil value creates an empty metadata object.
 type ForkRequest struct {
 	Title string
+	Meta  Meta
 }
 
 // Store provides the persistence primitives for opaque session entries.

@@ -15,6 +15,11 @@ graph. The Go language version declared by these tags is Go 1.24.0.
 
 ## Unreleased
 
+## v0.2.13 — fork target metadata
+
+- Added `session.ForkRequest.Meta` so session implementations can persist
+  target-owned metadata atomically when creating a fork. It is not inherited
+  from the source session.
 - Added this version-based history and a migration guide.
 - Clarified direct imports of domain contract modules and documentation
   ownership. These documentation changes do not change public SDK
