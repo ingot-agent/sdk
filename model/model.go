@@ -21,21 +21,22 @@ const (
 	RoleTool      Role = "tool"
 )
 
-// ReasoningEffort selects how much reasoning a capable model performs. The
-// empty value leaves the choice to the provider.
+// ReasoningEffort selects how much reasoning a capable model performs. An empty
+// request value inherits runtime defaults; ProviderDefault suppresses them.
 type ReasoningEffort string
 
 const (
-	ReasoningEffortNone    ReasoningEffort = "none"
-	ReasoningEffortMinimal ReasoningEffort = "minimal"
-	ReasoningEffortLow     ReasoningEffort = "low"
-	ReasoningEffortMedium  ReasoningEffort = "medium"
-	ReasoningEffortHigh    ReasoningEffort = "high"
-	ReasoningEffortXHigh   ReasoningEffort = "xhigh"
+	ReasoningEffortNone            ReasoningEffort = "none"
+	ReasoningEffortMinimal         ReasoningEffort = "minimal"
+	ReasoningEffortLow             ReasoningEffort = "low"
+	ReasoningEffortMedium          ReasoningEffort = "medium"
+	ReasoningEffortHigh            ReasoningEffort = "high"
+	ReasoningEffortXHigh           ReasoningEffort = "xhigh"
+	ReasoningEffortProviderDefault ReasoningEffort = "providerDefault"
 )
 
 // Valid reports whether the value is an explicit supported reasoning effort.
-// The empty value is reserved for provider-default behavior in Request.
+// The empty value and ProviderDefault are request controls, not model capabilities.
 func (e ReasoningEffort) Valid() bool {
 	switch e {
 	case ReasoningEffortNone, ReasoningEffortMinimal, ReasoningEffortLow, ReasoningEffortMedium, ReasoningEffortHigh, ReasoningEffortXHigh:
@@ -67,8 +68,9 @@ type Message struct {
 // Model chooses a model exposed by that provider.
 //
 // ReasoningEffort optionally selects how much reasoning the model performs. An
-// empty value leaves the choice to the provider; a non-empty value must be one
-// of the ReasoningEffort constants and must be supported by the selected model.
+// empty value inherits the runtime default. ProviderDefault skips that default
+// and is converted to an empty value before the provider is invoked. Other
+// non-empty values must be supported by the selected model.
 type Request struct {
 	Provider        string
 	Model           string
