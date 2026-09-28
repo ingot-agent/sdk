@@ -21,8 +21,9 @@ const (
 	RoleTool      Role = "tool"
 )
 
-// ReasoningEffort selects how much reasoning a capable model performs. The
-// empty value leaves the choice to the provider.
+// ReasoningEffort selects how much reasoning a capable model performs. An empty
+// request value inherits runtime defaults unless provider-default behavior is
+// explicitly requested.
 type ReasoningEffort string
 
 const (
@@ -67,8 +68,9 @@ type Message struct {
 // Model chooses a model exposed by that provider.
 //
 // ReasoningEffort optionally selects how much reasoning the model performs. An
-// empty value leaves the choice to the provider; a non-empty value must be one
-// of the ReasoningEffort constants and must be supported by the selected model.
+// empty value inherits the runtime default unless UseProviderDefaultReasoning
+// is set. A non-empty value must be one of the ReasoningEffort constants and
+// must be supported by the selected model.
 type Request struct {
 	Provider        string
 	Model           string
@@ -78,6 +80,9 @@ type Request struct {
 	MaxTokens       *int
 	Stop            []string
 	ReasoningEffort ReasoningEffort
+	// UseProviderDefaultReasoning suppresses the runtime reasoning default.
+	// It cannot be combined with an explicit ReasoningEffort.
+	UseProviderDefaultReasoning bool
 }
 
 // Usage reports token counts for a model response. Reported distinguishes an
