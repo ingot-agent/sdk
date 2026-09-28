@@ -222,9 +222,9 @@ and an optional `Stream` function. Names must be unique across the consumer's
 sources. Snapshot slices belong to the caller; invocation functions remain
 bound to the same immutable configuration and usable for the source's lifetime
 even after replacement. Fixed configurations use the same source contract.
-`model.Request.UseProviderDefaultReasoning` distinguishes a provider-default
+`model.ReasoningEffortProviderDefault` distinguishes a provider-default
 reasoning choice from an empty effort that inherits the model runtime default.
-It cannot be combined with an explicit `ReasoningEffort`.
+The model runtime converts it to an empty effort before invoking a provider.
 
 ## Contract conventions
 
