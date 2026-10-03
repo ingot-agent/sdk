@@ -14,10 +14,9 @@ type Execution struct {
 // at that point. It does not imply rollback, retry safety, durability, or the
 // state of external side effects.
 type Outcome struct {
-	Status     OutcomeStatus
-	Duration   time.Duration
-	Accounting Accounting
-	Failure    *Failure
+	Status   OutcomeStatus
+	Duration time.Duration
+	Failure  *Failure
 }
 
 // OutcomeStatus identifies the terminal state of a started turn.
@@ -31,53 +30,6 @@ const (
 	// OutcomeCanceled means cancellation or a deadline ended the turn.
 	OutcomeCanceled
 )
-
-// Accounting contains turn-level execution attempts and known
-// provider-reported token usage.
-type Accounting struct {
-	Rounds           int
-	ModelInvocations int
-	ToolCalls        int
-
-	Usage  TokenUsage
-	Models []ModelAccounting
-}
-
-// TokenUsage aggregates authoritative provider-reported token counts.
-// Coverage states whether every invocation that could have consumed model
-// resources was authoritatively settled.
-type TokenUsage struct {
-	InputTokens  int64
-	OutputTokens int64
-	TotalTokens  int64
-	Coverage     UsageCoverage
-}
-
-// UsageCoverage describes how much of the possible model execution usage is
-// represented by a TokenUsage value.
-type UsageCoverage uint8
-
-const (
-	// UsageUnavailable means no authoritative execution usage is available.
-	UsageUnavailable UsageCoverage = iota
-	// UsagePartial means known usage is present but at least one invocation's
-	// possible usage is not authoritatively settled.
-	UsagePartial
-	// UsageComplete means every invocation's possible usage is settled,
-	// including explicit rejections that could not consume model resources.
-	UsageComplete
-)
-
-// ModelAccounting contains authoritative completed invocations attributed to
-// one provider/model pair. Failed invocations without an authoritative
-// response are intentionally not attributed.
-type ModelAccounting struct {
-	Provider string
-	Model    string
-
-	CompletedInvocations int
-	Usage                TokenUsage
-}
 
 // FailureStage identifies the execution boundary at which a turn terminated.
 // It is not a durability, rollback, side-effect, or retryability verdict.

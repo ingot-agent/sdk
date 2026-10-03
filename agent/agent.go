@@ -12,9 +12,13 @@ import (
 
 // Turn is one user input in a session.
 type Turn struct {
-	SessionID   session.ID
-	Input       string
-	Attachments []content.Attachment
+	// RootSessionID owns cumulative usage across nested executions. An empty
+	// value defaults to SessionID for ordinary turns; child and followup
+	// dispatchers must explicitly supply their outermost accounting owner.
+	RootSessionID session.ID
+	SessionID     session.ID
+	Input         string
+	Attachments   []content.Attachment
 }
 
 // Result is the ordered multimodal result of an agent turn. It is canonical

@@ -31,6 +31,10 @@ type Metadata struct {
 	UpdatedAt  time.Time
 	ArchivedAt *time.Time
 	Meta       Meta
+	// TotalToken is the durable cumulative provider-reported token usage of
+	// this session, independent of Meta and Entry history. Usage settlement
+	// does not change UpdatedAt. New sessions and fork targets start at zero.
+	TotalToken int64
 }
 
 // Entry is an opaque, durable, versioned persistence record. Version identifies
@@ -86,6 +90,19 @@ type Store interface {
 	Load(context.Context, ID) ([]Entry, error)
 }
 
+// TokenUsageStore atomically adds provider-reported usage to sessions.
+// Implementations are concurrent-safe. AddTotalTokens requires a nonempty
+// targets slice of nonempty, valid UTF-8 identities and a nonnegative delta.
+// Duplicate identities are charged once. Every target must exist; archived
+// sessions may receive settlement. Missing targets or overflow leave all
+// targets unchanged. Success returns caller-owned authoritative metadata in
+// first-occurrence target order after all changes have committed. A zero delta
+// returns the current snapshots. Neither UpdatedAt nor Meta is changed.
+// An error may leave commit status unknown: callers must not blindly retry.
+type TokenUsageStore interface {
+	AddTotalTokens(context.Context, []ID, int64) ([]Metadata, error)
+}
+
 // Manager manages the lifecycle of known session identities. Get and every
 // mutation return authoritative metadata on success. Rename is permitted for
 // active and archived sessions and changes only Title. Archive and Restore are
@@ -97,8 +114,9 @@ type Store interface {
 // Fork creates a new active session whose entries are an opaque logical copy
 // of the source's committed entries in order. An archived source may be forked.
 // The target has a new identity and creation timestamps and does not inherit
-// the source lifecycle state. The portable contract does not define whether a
-// concurrently appended source entry falls before or after the fork boundary,
+// the source lifecycle state or TotalToken. The portable contract does not
+// define whether a concurrently appended source entry falls before or after
+// the fork boundary,
 // but the target must never contain a partial or corrupt entry. Callers needing
 // a deterministic boundary must prevent concurrent source mutation.
 //

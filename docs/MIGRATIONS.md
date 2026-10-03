@@ -6,7 +6,34 @@ target versions. Package comments and their external-package tests are the
 authoritative contract reference; this guide explains integration work across
 those packages.
 
-## Choose and verify one module graph
+## Session Token Accounting (Unreleased)
+
+The current branch changes Runtime invocation signatures to
+`Complete(ctx, rootSessionID, currentSessionID, request)` and
+`Stream(ctx, rootSessionID, currentSessionID, request, handler)`. Both identities
+must name existing Sessions. Keep provider callbacks, complete interceptors and
+`StreamNext` unchanged. Update Runtime implementations, callers and mocks together.
+
+Add `RootSessionID` to Turn and CompactionRequest construction. Ordinary Turns
+may default the root to current; children and followups must explicitly inherit
+the outermost owner. Ordinary forks use their new identity for both arguments.
+Keep accounting ownership separate from cancellation/execution-tree ownership.
+
+Session implementations must expose `Metadata.TotalToken` independently of
+`Meta`, initialize new/forked Sessions at zero, and implement
+`session.TokenUsageStore` with atomic distinct-target increments and committed
+snapshots. Do not retry increments blindly after a persistence error. Settle
+successful, reported provider usage before publishing a session-bound interaction
+snapshot; transient events and estimates are not accounting sources.
+
+Remove `Outcome.Accounting`, `Accounting`, `TokenUsage`, `UsageCoverage`, and
+`ModelAccounting` from consumers. Turn outcomes retain status, duration and
+failure details; provider `model.Response.Usage` remains authoritative on success.
+This is an unreleased breaking change. Keep local workspace replacements for
+development; coordinated publication requires new SDK/consumer releases before
+updating published module requirements. No release version is claimed here.
+
+## Choose and Verify One Module Graph
 
 The SDK is optional. Plugins import the contract packages they use directly;
 the Builder has no SDK selection/configuration field. A separate domain SDK
@@ -253,11 +280,10 @@ mean rollback or retry safety.
 
 For runtime implementers, `agent.Interceptor` still returns `agent.Result`.
 Settlement wraps the interceptor chain; do not change its generic result type
-to `Execution`. Count started Round, Model Runtime, and canonical Tool Runtime
-attempts. Aggregate only authoritative provider-reported execution usage.
-`Usage.Reported` distinguishes a reported zero from absent usage; estimates from
-`usage.Counter` are not provider execution accounting. Coverage must remain
-Unavailable or Partial when the available facts do not establish Complete.
+to `Execution`. The Turn accounting introduced in this release is removed in
+the unreleased Session accounting migration above. `Usage.Reported` still
+distinguishes a reported zero from absent usage in model responses; estimates
+from `usage.Counter` are not provider execution accounting.
 
 ## Session lifecycle capabilities (v0.2.6)
 

@@ -11,8 +11,11 @@ import (
 // CompactionRequest describes one model invocation whose message context may
 // be compacted. Invocation is immutable-by-contract.
 type CompactionRequest struct {
-	SessionID  session.ID
-	Invocation model.Request
+	// RootSessionID owns usage of summary invocations. Both identities must
+	// be nonempty; SessionID owns the compacted history and checkpoints.
+	RootSessionID session.ID
+	SessionID     session.ID
+	Invocation    model.Request
 }
 
 // CompactionResult contains the complete message sequence to use for the

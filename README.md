@@ -88,7 +88,7 @@ it uses.
 | `prompt` | Prompt contribution and rendering. |
 | `contextwindow` | Model-context compaction. |
 | `usage` | Model-aware input counting with explicit accuracy. |
-| `agent` | Agent turn execution, single-Turn child-agent management, outcome accounting, reasoning/output streaming, history access, and interception. |
+| `agent` | Agent turn execution, single-Turn child-agent management, execution outcomes, reasoning/output streaming, history access, and interception. |
 | `observation` | Passive, correlated Turn/Round/Model/Tool execution facts. |
 | `interaction` | Presentation-neutral structured effects between plugins and a host environment. |
 | `operation` | Externally invocable, transport-neutral plugin operations. |
@@ -351,22 +351,32 @@ tool calls without rolling back completed effects. Nil handlers return
 unavailable, and a successful stream may deliver zero events. Any event already
 delivered is transient progress rather than a canonical result if Stream fails.
 
-## Execution outcome and accounting (v0.2.5)
+## Execution outcome (v0.2.5)
 
 The former v0.4 design milestone was implemented in module tag v0.2.5.
 
 `agent.Runtime.Run` and `agent.StreamingRuntime.Stream` return an
 `agent.Execution`. A successful execution contains a canonical `Result`; once
 the Turn lifecycle starts, failed and canceled executions still contain an
-authoritative `Outcome` with duration, failure stage, and Turn-level accounting.
+authoritative `Outcome` with status, duration, and failure stage.
 A zero `Execution` means validation failed before the lifecycle was established.
 
-Accounting counts started Round, Model Runtime, and canonical Tool Runtime
-attempts. It aggregates only provider-reported execution usage and exposes
-`Unavailable`, `Partial`, or `Complete` coverage instead of filling gaps with
-estimates. Provider/model attribution comes only from authoritative successful
-model responses. Outcome and failure stages do not imply rollback, durability,
-external side-effect state, cost, or retry safety.
+Token usage belongs to Sessions: `Metadata.TotalToken` is separate
+from `Metadata.Meta`, and `TokenUsageStore` atomically adds a reported increment
+to distinct targets. Turn accounting, coverage and per-model aggregation are removed.
+Outcome and failure stages do not imply rollback, durability, external
+side-effect state, cost, or retry safety.
+
+`model.Runtime.Complete(ctx, rootSessionID, currentSessionID, request)` and
+`model.StreamingRuntime.Stream(ctx, rootSessionID, currentSessionID, request, handler)`
+attribute provider-reported usage once to each distinct Session. The root is
+the outermost accounting owner, including for nested children and followups.
+An ordinary fork owns its own usage and starts at zero. `agent.Turn` and
+`contextwindow.CompactionRequest` carry `RootSessionID`; a missing Turn root
+defaults to current for ordinary callers. Provider callbacks and model
+interceptors retain their existing signatures. See the
+[unreleased migration](docs/MIGRATIONS.md#session-token-accounting-unreleased)
+before rebuilding consumers.
 
 `model.StreamEvent.Semantic` defaults to `StreamSemanticContent` for existing
 providers. `StreamSemanticReasoning` carries transient text and is excluded from
