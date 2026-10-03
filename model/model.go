@@ -8,6 +8,7 @@ import (
 
 	"github.com/ingot-agent/sdk/content"
 	"github.com/ingot-agent/sdk/pipeline"
+	"github.com/ingot-agent/sdk/session"
 	"github.com/ingot-agent/sdk/tool"
 )
 
@@ -141,8 +142,12 @@ type ProviderSource interface {
 // interceptor chain. A Response is authoritative only when the returned error
 // is nil. A non-nil error does not imply that provider-side effects did not
 // occur or that retrying the request is safe.
+// Both session identities must name existing sessions. Provider-reported usage
+// is attributed once to each distinct identity; rootSessionID is the outermost
+// accounting owner, while currentSessionID owns this invocation. Attribution
+// survives downstream failure and is not changed by model interceptors.
 type Runtime interface {
-	Complete(context.Context, Request) (Response, error)
+	Complete(ctx context.Context, rootSessionID, currentSessionID session.ID, request Request) (Response, error)
 }
 
 // RequestResolver materializes the provider and model defaults for an
@@ -208,7 +213,7 @@ type StreamHandler func(StreamEvent) error
 // when the returned error is nil. Delivered events are transient progress and
 // are not a canonical response when Stream returns an error.
 type StreamingRuntime interface {
-	Stream(context.Context, Request, StreamHandler) (Response, error)
+	Stream(ctx context.Context, rootSessionID, currentSessionID session.ID, request Request, handler StreamHandler) (Response, error)
 }
 
 // StreamNext invokes a streaming provider or the next streaming interceptor.

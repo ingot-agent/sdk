@@ -15,6 +15,13 @@ graph. The Go language version declared by these tags is Go 1.24.0.
 
 ## Unreleased
 
+- Runtime Complete/Stream now take explicit root/current Session identities;
+  Turn and CompactionRequest carry the root through child and summary calls.
+- Added `Metadata.TotalToken` and atomic `TokenUsageStore`; forks start at zero.
+- Removed Turn accounting, execution attempt counts, coverage and per-model
+  accounting types. Outcomes retain status, duration and failure details;
+  provider `Response.Usage` remains.
+
 ## v0.2.13 — fork target metadata
 
 - Added `session.ForkRequest.Meta` so session implementations can persist

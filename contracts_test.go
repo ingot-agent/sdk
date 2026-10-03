@@ -95,7 +95,15 @@ func (streamingProvider) Stream(
 	return model.Response{}, nil
 }
 
-type modelRuntime struct{ streamingProvider }
+type modelRuntime struct{}
+
+func (modelRuntime) Complete(context.Context, session.ID, session.ID, model.Request) (model.Response, error) {
+	return model.Response{}, nil
+}
+
+func (modelRuntime) Stream(context.Context, session.ID, session.ID, model.Request, model.StreamHandler) (model.Response, error) {
+	return model.Response{}, nil
+}
 
 var (
 	_ model.Runtime          = modelRuntime{}
