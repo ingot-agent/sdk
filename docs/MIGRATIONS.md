@@ -6,6 +6,24 @@ target versions. Package comments and their external-package tests are the
 authoritative contract reference; this guide explains integration work across
 those packages.
 
+## Plugin Context Records (Unreleased)
+
+Plugins can encode `agent.PluginInput` and append its versioned Entry using the
+existing `session.Store`. Consumers must use an SDK revision that contains this
+new API and an Agent that decodes `agent.plugin_input`. Older Agents ignore the
+new Kind, so successful storage alone does not establish feature support.
+
+Supporting Agents turn the record into a user message with an escaped
+`<system source="plugin" plugin="...">...</system>` envelope. Prompt renderers
+can explain the marker's source without prescribing business interpretation.
+The official Agent keeps its Turn snapshot behavior and defers inputs inside
+incomplete tool rounds until completion or recovery. This needs no Session
+schema migration or rewrite of existing `agent.message` records.
+
+Use local workspace composition while developing this unreleased change.
+Publish the SDK first, then select the verified SDK version in Agent and plugin
+consumer modules. No new published version is claimed by this branch.
+
 ## Session Token Accounting (Unreleased)
 
 The current branch changes Runtime invocation signatures to

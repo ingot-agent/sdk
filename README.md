@@ -88,7 +88,7 @@ it uses.
 | `prompt` | Prompt contribution and rendering. |
 | `contextwindow` | Model-context compaction. |
 | `usage` | Model-aware input counting with explicit accuracy. |
-| `agent` | Agent turn execution, single-Turn child-agent management, execution outcomes, reasoning/output streaming, history access, and interception. |
+| `agent` | Agent turn execution, single-Turn child-agent management, execution outcomes, reasoning/output streaming, history access, plugin-input records, and interception. |
 | `observation` | Passive, correlated Turn/Round/Model/Tool execution facts. |
 | `interaction` | Presentation-neutral structured effects between plugins and a host environment. |
 | `operation` | Externally invocable, transport-neutral plugin operations. |
@@ -120,6 +120,26 @@ capabilities instead of dispatching operations by name.
 The Component ABI (`Cleanup`, `Optional`, `Named`) and the runtime host
 contracts (invocation, lifecycle, state scope) live in the
 [ingot ABI](https://github.com/ingot-agent/ingot-abi), not in this module.
+
+## Plugin Context Records (Unreleased)
+
+Plugins can use `agent.EncodePluginInput(agent.PluginInput{Plugin: "example.index",
+Text: "context text"})` and append the returned Entry directly with
+`session.Store.Append(ctx, sessionID, entry)`. Pass the Session ID explicitly
+from the invocation's business envelope. Text must be nonempty XML-compatible
+UTF-8 and at most 64 KiB; the plugin name is caller-supplied, not authenticated.
+
+Supporting Agents project `agent.plugin_input` records to user-role messages
+enclosed in `<system source="plugin" plugin="...">...</system>`. Inputs within an
+incomplete tool round are deferred until its results are complete or recovered;
+the original Entry remains durable. History reads do not perform recovery.
+
+Successful Append means persistence, not model receipt or processing. This
+protocol does not start turns, alter existing request snapshots, define business
+meaning or instruction priority, or provide retry deduplication. The existing
+Store error contract applies. See [the package source](agent/plugin_input.go).
+This API is branch-only until included in a published SDK release; consumers
+must select the SDK release and supporting Agent/Prompt together.
 
 ## Migrating runtime contracts
 
