@@ -6,22 +6,28 @@ target versions. Package comments and their external-package tests are the
 authoritative contract reference; this guide explains integration work across
 those packages.
 
-## Plugin Context Records (Unreleased)
+## Plugin Context Capabilities (Unreleased)
 
-Plugins can encode `agent.PluginInput` and append its versioned Entry using the
-existing `session.Store`. Consumers must use an SDK revision that contains this
-new API and an Agent that decodes `agent.plugin_input`. Older Agents ignore the
-new Kind, so successful storage alone does not establish feature support.
+The SDK now retains `agent.PluginInput` and capability contracts only. Replace
+calls to SDK encoding/decoding helpers and `PluginInput.Message()` with injected
+`agent.PluginInputWriter` and `agent.PluginInputProjector` capabilities.
+Record kinds, versions, validation
+limits and error definitions belong to the provider.
 
-Supporting Agents turn the record into a user message with an escaped
-`<system source="plugin" plugin="...">...</system>` envelope. Prompt renderers
-can explain the marker's source without prescribing business interpretation.
-The official Agent keeps its Turn snapshot behavior and defers inputs inside
-incomplete tool rounds until completion or recovery. This needs no Session
-schema migration or rewrite of existing `agent.message` records.
+Compose the official `context.input` plugin to supply those capabilities and its
+`prompt.Contributor` source explanation. The official Agent takes an optional
+projector; without it, non-agent records are ignored. The default Prompt renders
+the explanation as an ordinary contributor block and includes no built-in notice.
+No Session schema migration or new `agent.message` version is needed.
+
+The Agent reads inputs during history loading at Turn start, then keeps that
+context for subsequent rounds. Later appends are read in a future Turn.
+It defers inputs inside unfinished
+tool rounds until completion or recovery. User-input association remains owned
+by the calling plugin through its own invocation constraints and Store Appends.
 
 Use local workspace composition while developing this unreleased change.
-Publish the SDK first, then select the verified SDK version in Agent and plugin
+Publish the SDK first, then select the verified version in the provider and
 consumer modules. No new published version is claimed by this branch.
 
 ## Session Token Accounting (Unreleased)

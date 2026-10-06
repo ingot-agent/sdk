@@ -121,25 +121,26 @@ The Component ABI (`Cleanup`, `Optional`, `Named`) and the runtime host
 contracts (invocation, lifecycle, state scope) live in the
 [ingot ABI](https://github.com/ingot-agent/ingot-abi), not in this module.
 
-## Plugin Context Records (Unreleased)
+## Plugin Context Capabilities (Unreleased)
 
-Plugins can use `agent.EncodePluginInput(agent.PluginInput{Plugin: "example.index",
-Text: "context text"})` and append the returned Entry directly with
-`session.Store.Append(ctx, sessionID, entry)`. Pass the Session ID explicitly
-from the invocation's business envelope. Text must be nonempty XML-compatible
-UTF-8 and at most 64 KiB; the plugin name is caller-supplied, not authenticated.
+The SDK defines `agent.PluginInput` data and two injected capabilities:
+`PluginInputWriter.Append` and `PluginInputProjector.Project`.
+Consumers supply the target Session ID explicitly
+and depend on these interfaces, without importing a provider implementation.
+See [the contracts](agent/plugin_input.go).
 
-Supporting Agents project `agent.plugin_input` records to user-role messages
-enclosed in `<system source="plugin" plugin="...">...</system>`. Inputs within an
-incomplete tool round are deferred until its results are complete or recovered;
-the original Entry remains durable. History reads do not perform recovery.
+Providers own validation, limits, wire formats, and envelopes. The official
+[context-input plugin](https://github.com/ingot-agent/plugins/tree/main/context-input)
+implements those operations using ordinary `session.Store.Append` and contributes
+its source explanation through `prompt.Contributor`. None of that processing
+is implemented in the SDK. Supporting Agents handle projection order, unfinished
+tool rounds, and recovery; history reads remain read-only.
 
-Successful Append means persistence, not model receipt or processing. This
-protocol does not start turns, alter existing request snapshots, define business
-meaning or instruction priority, or provide retry deduplication. The existing
-Store error contract applies. See [the package source](agent/plugin_input.go).
-This API is branch-only until included in a published SDK release; consumers
-must select the SDK release and supporting Agent/Prompt together.
+Append success means persistence, not model receipt or processing. It does not
+start turns or alter existing request snapshots. The contracts define no business
+meaning, instruction priority, or retry deduplication; Store error semantics apply.
+These interfaces are branch-only until a published SDK release contains them.
+Compose the matching local SDK, provider and Agent for development.
 
 ## Migrating runtime contracts
 

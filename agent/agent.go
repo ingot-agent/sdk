@@ -41,8 +41,8 @@ type Runtime interface {
 // History loads the validated, persisted model messages for one session.
 // Loads for the same session are serialized with Runtime.Run and
 // StreamingRuntime.Stream; different sessions may be loaded concurrently.
-// Agents supporting PluginInput project those records to user messages. Inputs
-// appended within an incomplete tool round are deferred until its results are
+// Agents using a PluginInputProjector project recognized records to user messages.
+// Inputs appended within an incomplete tool round are deferred until its results are
 // complete or recovered. Load itself is read-only and does not perform recovery.
 // The returned aggregate and all nested
 // mutable values are owned by the caller.

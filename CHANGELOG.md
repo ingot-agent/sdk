@@ -15,10 +15,10 @@ graph. The Go language version declared by these tags is Go 1.24.0.
 
 ## Unreleased
 
-- Added `agent.PluginInput`, versioned Entry encoding/decoding, text validation,
-  and error contracts for plugins appending context directly through Store.
-  Supporting Agents project these records as tagged user messages; no business
-  priority, invocation timing, or retry guarantee is defined.
+- Added `agent.PluginInput` data with writer and projector capability
+  interfaces. Validation, versioned record handling, and XML formatting moved
+  from SDK helpers into the `context.input` plugin. Consumers inject SDK
+  interfaces; no business priority, invocation timing, or retry guarantee is defined.
 - Runtime Complete/Stream now take explicit root/current Session identities;
   Turn and CompactionRequest carry the root through child and summary calls.
 - Added `Metadata.TotalToken` and atomic `TokenUsageStore`; forks start at zero.
