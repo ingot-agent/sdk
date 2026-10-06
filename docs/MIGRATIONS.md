@@ -6,6 +6,30 @@ target versions. Package comments and their external-package tests are the
 authoritative contract reference; this guide explains integration work across
 those packages.
 
+## Plugin Context Capabilities (Unreleased)
+
+The SDK now retains `agent.PluginInput` and capability contracts only. Replace
+calls to SDK encoding/decoding helpers and `PluginInput.Message()` with injected
+`agent.PluginInputWriter` and `agent.PluginInputProjector` capabilities.
+Record kinds, versions, validation
+limits and error definitions belong to the provider.
+
+Compose the official `context.input` plugin to supply those capabilities and its
+`prompt.Contributor` source explanation. The official Agent takes an optional
+projector; without it, non-agent records are ignored. The default Prompt renders
+the explanation as an ordinary contributor block and includes no built-in notice.
+No Session schema migration or new `agent.message` version is needed.
+
+The Agent reads inputs during history loading at Turn start, then keeps that
+context for subsequent rounds. Later appends are read in a future Turn.
+It defers inputs inside unfinished
+tool rounds until completion or recovery. User-input association remains owned
+by the calling plugin through its own invocation constraints and Store Appends.
+
+Use local workspace composition while developing this unreleased change.
+Publish the SDK first, then select the verified version in the provider and
+consumer modules. No new published version is claimed by this branch.
+
 ## Session Token Accounting (Unreleased)
 
 The current branch changes Runtime invocation signatures to

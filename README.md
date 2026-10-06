@@ -88,7 +88,7 @@ it uses.
 | `prompt` | Prompt contribution and rendering. |
 | `contextwindow` | Model-context compaction. |
 | `usage` | Model-aware input counting with explicit accuracy. |
-| `agent` | Agent turn execution, single-Turn child-agent management, execution outcomes, reasoning/output streaming, history access, and interception. |
+| `agent` | Agent turn execution, single-Turn child-agent management, execution outcomes, reasoning/output streaming, history access, plugin-input records, and interception. |
 | `observation` | Passive, correlated Turn/Round/Model/Tool execution facts. |
 | `interaction` | Presentation-neutral structured effects between plugins and a host environment. |
 | `operation` | Externally invocable, transport-neutral plugin operations. |
@@ -120,6 +120,27 @@ capabilities instead of dispatching operations by name.
 The Component ABI (`Cleanup`, `Optional`, `Named`) and the runtime host
 contracts (invocation, lifecycle, state scope) live in the
 [ingot ABI](https://github.com/ingot-agent/ingot-abi), not in this module.
+
+## Plugin Context Capabilities (Unreleased)
+
+The SDK defines `agent.PluginInput` data and two injected capabilities:
+`PluginInputWriter.Append` and `PluginInputProjector.Project`.
+Consumers supply the target Session ID explicitly
+and depend on these interfaces, without importing a provider implementation.
+See [the contracts](agent/plugin_input.go).
+
+Providers own validation, limits, wire formats, and envelopes. The official
+[context-input plugin](https://github.com/ingot-agent/plugins/tree/main/context-input)
+implements those operations using ordinary `session.Store.Append` and contributes
+its source explanation through `prompt.Contributor`. None of that processing
+is implemented in the SDK. Supporting Agents handle projection order, unfinished
+tool rounds, and recovery; history reads remain read-only.
+
+Append success means persistence, not model receipt or processing. It does not
+start turns or alter existing request snapshots. The contracts define no business
+meaning, instruction priority, or retry deduplication; Store error semantics apply.
+These interfaces are branch-only until a published SDK release contains them.
+Compose the matching local SDK, provider and Agent for development.
 
 ## Migrating runtime contracts
 
