@@ -15,6 +15,14 @@ graph. The Go language version declared by these tags is Go 1.24.0.
 
 ## Unreleased
 
+- Replaced public Agent Run/Stream with asynchronous SendMessage and Control;
+  Turn now carries ordered Inputs with per-submission paths/media. Added bounded
+  runtime snapshots and ordered input/round progress using existing identities.
+- Control.Watch returns revision-ordered RuntimeUpdate patches or coalesced
+  progress; Reset recovers lagging watchers and State remains the full snapshot.
+- Store.Append now accepts an atomic, contiguous variadic batch; empty batches
+  are no-ops. File notice and actual user message share a single commit.
+
 - Added `agent.PluginInput` data with writer and projector capability
   interfaces. Validation, versioned record handling, and XML formatting moved
   from SDK helpers into the `context.input` plugin. Consumers inject SDK

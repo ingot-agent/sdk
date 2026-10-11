@@ -78,15 +78,18 @@ type ForkRequest struct {
 // entries.
 //
 // Append to an archived session fails with ErrArchived. Append returning nil
-// means the entry is definitely committed and UpdatedAt reflects its commit
+// means all entries are definitely committed and UpdatedAt reflects their commit
 // time. Append returning an error means commit status is unknown to the caller;
 // callers must not retry merely because an error was returned. The commit
 // decision is final when Append returns: an Append that committed is visible
 // to every successful Load begun after that return, and an Append that did not
 // commit will not appear later.
+// A batch is contiguous, ordered, and atomic: concurrent appends cannot split it
+// and Load cannot see a partial batch. An empty batch is a no-op and does not
+// update activity. Implementations must not implement batches as separate commits.
 type Store interface {
 	Create(context.Context, CreateRequest) (Metadata, error)
-	Append(context.Context, ID, Entry) error
+	Append(context.Context, ID, ...Entry) error
 	Load(context.Context, ID) ([]Entry, error)
 }
 

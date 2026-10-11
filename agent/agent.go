@@ -10,15 +10,15 @@ import (
 	"github.com/ingot-agent/sdk/session"
 )
 
-// Turn is one user input in a session.
+// Turn is one execution lifecycle. Inputs contains the ordered submissions
+// admitted to it; pending submissions and preparation failures are excluded.
 type Turn struct {
 	// RootSessionID owns cumulative usage across nested executions. An empty
 	// value defaults to SessionID for ordinary turns; child and followup
 	// dispatchers must explicitly supply their outermost accounting owner.
 	RootSessionID session.ID
 	SessionID     session.ID
-	Input         string
-	Attachments   []content.Attachment
+	Inputs        []Input
 }
 
 // Result is the ordered multimodal result of an agent turn. It is canonical
@@ -28,19 +28,17 @@ type Result struct {
 	Output content.Content
 }
 
-// Runtime executes agent turns. Once a turn lifecycle is established,
-// Execution.Outcome is valid even when Run returns an error; pre-lifecycle
-// validation failures return a zero Execution. Turns for different sessions
-// may run in parallel; turns for one session are serialized in call order.
-// Cancellation stops future work but does not roll back durable progress or
-// external side effects, and an error does not imply that retrying is safe.
+// Runtime accepts messages and owns their scheduling. SendMessage returns once
+// accepted, not when execution finishes. Its context controls admission only;
+// accepted work runs under the runtime's context and is canceled through Control.
+// A successful submission need not yet be persisted or seen by the model.
 type Runtime interface {
-	Run(context.Context, Turn) (Execution, error)
+	SendMessage(context.Context, MessageRequest) error
 }
 
 // History loads the validated, persisted model messages for one session.
-// Loads for the same session are serialized with Runtime.Run and
-// StreamingRuntime.Stream; different sessions may be loaded concurrently.
+// Loads for the same session are serialized with complete turn lifecycles;
+// SendMessage and state queries do not wait for that execution gate.
 // Agents using a PluginInputProjector project recognized records to user messages.
 // Inputs appended within an incomplete tool round are deferred until its results are
 // complete or recovered. Load itself is read-only and does not perform recovery.
