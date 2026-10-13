@@ -34,6 +34,17 @@ Component Graph purely through Go type identity: no SDK module path needs to
 be configured for this module, or for any other contract module, to be used
 by a plugin.
 
+## Provider continuation state (Unreleased)
+
+`model.Message.Replay` optionally retains opaque, versioned provider state such
+as signed reasoning or an ordered output sequence, independently of visible
+content. The SDK does not define a provider wire format. History and prompt
+implementations must retain this state for unchanged messages and clone it at
+ownership boundaries with `ReplayState.Clone()`. Message edits should clear it;
+adapters must verify its scope and agreement with ordinary message fields before
+replaying it. Summaries must not inherit the original state. See the
+[migration guide](docs/MIGRATIONS.md) for coordinated consumer updates.
+
 ## Scope: general agent capabilities only
 
 This repository is for capabilities that remain meaningful across unrelated

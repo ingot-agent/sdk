@@ -15,6 +15,12 @@ graph. The Go language version declared by these tags is Go 1.24.0.
 
 ## Unreleased
 
+- Add optional `model.Message.Replay` and `model.ReplayState.Clone` for opaque,
+  scoped provider continuation state. Stores and message transforms must retain
+  its bytes independently of visible content; adapters validate scope and
+  agreement with ordinary fields before replaying it. Edited messages use their
+  ordinary fields instead of stale replay content.
+
 - Added runtime-only `model.StreamRetry` and Agent `StreamRetry` /
   `StreamRecovered` control events. Streaming consumers and interceptors must
   retract only the failed model attempt's provisional state before replay and

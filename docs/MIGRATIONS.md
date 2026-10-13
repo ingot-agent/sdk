@@ -6,6 +6,30 @@ target versions. Package comments and their external-package tests are the
 authoritative contract reference; this guide explains integration work across
 those packages.
 
+## Provider Continuation State (Unreleased)
+
+`model.Message` now includes optional `Replay *model.ReplayState`. It separates
+provider-owned continuation data from visible content and tool calls. Format is
+a versioned adapter-owned identifier; Provider and Model describe the original
+request selection. Signed reasoning and ordered output replay are two uses of
+this provider-neutral contract. Unknown formats or scopes must be ignored by
+adapters. Known data must be validated against the current message before use;
+it must never restore text or tool calls removed by an interceptor.
+
+Update message cloning, persistence, prompt composition, compaction, runtime and
+observation snapshots together. Clone with `ReplayState.Clone()`. Preserve bytes
+and order for unchanged messages, clear state on edits and newly synthesized
+summaries, and keep opaque data out of rendered content and summary instructions.
+Existing history without Replay remains valid; already discarded state cannot
+be recovered. Unkeyed `Message` struct literals must add the new field or migrate
+to keyed literals.
+
+The SDK does not define a persistence schema or migrate stored messages.
+Consumers introducing a new schema must version it and document reader and
+downgrade compatibility. Use an external Go workspace during local validation.
+Publish this SDK and verify its tag before updating participating plugin
+dependencies; this branch does not claim a new released version.
+
 ## Plugin Context Capabilities (Unreleased)
 
 The SDK now retains `agent.PluginInput` and capability contracts only. Replace
