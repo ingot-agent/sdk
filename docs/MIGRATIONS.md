@@ -475,3 +475,18 @@ retained input/output ownership, handler failure, context cancellation, and
 persisted old/new data as applicable. For a release, repeat consumer checks on
 the exact downloadable tagged module graph with `GOWORK=off`; local replacement
 success is useful development evidence but is not publication evidence.
+
+## Streaming retry retraction (unreleased)
+
+Model stream consumers and interceptors must handle `model.StreamRetry` by
+clearing both semantic accumulators and restarting part indices from zero.
+This control event is runtime-owned and its callback may abort the invocation.
+Agent stream consumers must handle `agent.StreamRetry` using UTF-8 byte suffix
+counts, and `agent.StreamRecovered` to clear status without altering text.
+Do not use byte counts as JavaScript UTF-16 string offsets. A UI bridge can
+validate/truncate UTF-8 on its backend and send authoritative text prefixes.
+Consumers unable to retract progress must return an error for retry events.
+
+Coordinate SDK publication and consumer version updates before releasing the
+new runtime behavior. Existing published SDK v0.2.16 does not contain these
+contracts; validate the pending changes together with a local Go workspace.

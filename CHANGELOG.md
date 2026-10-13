@@ -15,6 +15,12 @@ graph. The Go language version declared by these tags is Go 1.24.0.
 
 ## Unreleased
 
+- Added runtime-only `model.StreamRetry` and Agent `StreamRetry` /
+  `StreamRecovered` control events. Streaming consumers and interceptors must
+  retract only the failed model attempt's provisional state before replay and
+  preserve prior rounds. This changes observable stream semantics; publish the
+  SDK and update participating runtimes and consumers together.
+
 - Added `agent.PluginInput` data with writer and projector capability
   interfaces. Validation, versioned record handling, and XML formatting moved
   from SDK helpers into the `context.input` plugin. Consumers inject SDK
