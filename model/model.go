@@ -5,6 +5,7 @@ package model
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/ingot-agent/sdk/content"
 	"github.com/ingot-agent/sdk/pipeline"
@@ -161,13 +162,19 @@ type RequestResolver interface {
 // Interceptor wraps a complete model request.
 type Interceptor = pipeline.Interceptor[Request, Response]
 
-// StreamEventKind identifies a content part lifecycle event.
+// StreamEventKind identifies a content part lifecycle or retry control event.
 type StreamEventKind uint8
 
 const (
 	StreamPartStart StreamEventKind = iota + 1
 	StreamPartDelta
 	StreamPartEnd
+	// StreamRetry retracts all provisional content and reasoning from the
+	// current invocation before another provider attempt. Both part sequences
+	// restart at zero. It is emitted by the runtime, never by provider adapters.
+	// Consumers and interceptors must discard the previous attempt's state or
+	// return an error to stop the retry. Earlier invocations are unaffected.
+	StreamRetry
 )
 
 // StreamSemantic describes the purpose of a streamed part independently of
@@ -202,6 +209,13 @@ type StreamEvent struct {
 
 	TextDelta string
 	DataDelta []byte
+
+	// Attempt and RetryDelay are set only on StreamRetry. Attempt is the next
+	// provider attempt (at least 2, including the original request); RetryDelay
+	// is the nonnegative planned wait. Cancellation can prevent that attempt.
+	// All part and content fields must be zero on a retry event.
+	Attempt    int
+	RetryDelay time.Duration
 }
 
 // StreamHandler receives events synchronously in delivery order. Returning an
