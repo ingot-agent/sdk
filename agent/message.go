@@ -124,6 +124,14 @@ type ExecutionBlock struct {
 	Reasoning  string
 	Output     string
 	Tools      []ToolState
+	Retry      *RetryState
+}
+
+// RetryState describes a planned retry of the current model invocation. It is
+// transient and cleared when output resumes or the invocation succeeds.
+type RetryState struct {
+	Attempt int
+	DelayMS int64
 }
 
 type ToolState struct {

@@ -34,6 +34,17 @@ Component Graph purely through Go type identity: no SDK module path needs to
 be configured for this module, or for any other contract module, to be used
 by a plugin.
 
+## Provider continuation state (Unreleased)
+
+`model.Message.Replay` optionally retains opaque, versioned provider state such
+as signed reasoning or an ordered output sequence, independently of visible
+content. The SDK does not define a provider wire format. History and prompt
+implementations must retain this state for unchanged messages and clone it at
+ownership boundaries with `ReplayState.Clone()`. Message edits should clear it;
+adapters must verify its scope and agreement with ordinary message fields before
+replaying it. Summaries must not inherit the original state. See the
+[migration guide](docs/MIGRATIONS.md) for coordinated consumer updates.
+
 ## Scope: general agent capabilities only
 
 This repository is for capabilities that remain meaningful across unrelated
@@ -444,3 +455,34 @@ Concrete definitions, tool allowlists, scheduling and recovery belong to
 while the tool surface belongs to
 [tool-subagent](https://github.com/ingot-agent/plugins/blob/main/tool-subagent/README.md).
 The SDK owns their contract semantics, not implementation policy.
+
+## Stream retry control events (unreleased)
+
+`model.StreamRetry` retracts the current model invocation's provisional content
+and reasoning before another provider attempt. It carries a one-based next
+`Attempt` (at least 2) and planned `RetryDelay`; all part fields are zero. Both
+part indices restart at zero. Runtimes emit this event; provider callbacks do
+not. Consumers and interceptors must reset their per-attempt state or reject
+the event by returning an error. Cancellation can prevent the planned attempt.
+
+At the Agent boundary, `agent.StreamRetry` carries the same attempt/delay plus
+`DiscardOutputBytes` and `DiscardReasoningBytes`. Remove these UTF-8 byte counts
+from the respective accumulated text suffixes, always on rune boundaries.
+Only the failed attempt is retracted, including across repeated retries;
+earlier rounds, canonical messages and completed effects are unaffected.
+`agent.StreamRecovered` has no payload and clears retry status when the model
+invocation eventually succeeds, including when it emits only tool calls.
+Returning an error from either control event stops further work as with deltas.
+
+This is an observable stream-contract extension: consumers must support the
+control events before runtimes enable retries after partial output. It is
+independent of presentation and applies to replaceable provisional streams in
+interactive, batch and delegated Agent implementations. Model runtimes and
+remote execution bridges can implement the same semantics. Retry policy,
+provider error classification and persistence remain outside the SDK.
+
+For the SendMessage lifecycle, these Agent stream events are consumed internally.
+Public clients receive coalesced RuntimeUpdate progress and authoritative Turn
+snapshots through Control.Watch. A retry flushes preceding progress, retracts
+only the affected round and publishes ExecutionBlock.Retry. Output recovery or
+StreamRecovered clears that state. No public Run/Stream method is restored.

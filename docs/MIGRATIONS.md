@@ -39,6 +39,30 @@ are available. Historical Run/Stream examples below describe their named version
   interaction. Create inline followups only after the source lifecycle and queue
   are idle.
 
+## Provider Continuation State (Unreleased)
+
+`model.Message` now includes optional `Replay *model.ReplayState`. It separates
+provider-owned continuation data from visible content and tool calls. Format is
+a versioned adapter-owned identifier; Provider and Model describe the original
+request selection. Signed reasoning and ordered output replay are two uses of
+this provider-neutral contract. Unknown formats or scopes must be ignored by
+adapters. Known data must be validated against the current message before use;
+it must never restore text or tool calls removed by an interceptor.
+
+Update message cloning, persistence, prompt composition, compaction, runtime and
+observation snapshots together. Clone with `ReplayState.Clone()`. Preserve bytes
+and order for unchanged messages, clear state on edits and newly synthesized
+summaries, and keep opaque data out of rendered content and summary instructions.
+Existing history without Replay remains valid; already discarded state cannot
+be recovered. Unkeyed `Message` struct literals must add the new field or migrate
+to keyed literals.
+
+The SDK does not define a persistence schema or migrate stored messages.
+Consumers introducing a new schema must version it and document reader and
+downgrade compatibility. Use an external Go workspace during local validation.
+Publish this SDK and verify its tag before updating participating plugin
+dependencies; this branch does not claim a new released version.
+
 ## Plugin Context Capabilities (Unreleased)
 
 The SDK now retains `agent.PluginInput` and capability contracts only. Replace
@@ -509,3 +533,24 @@ retained input/output ownership, handler failure, context cancellation, and
 persisted old/new data as applicable. For a release, repeat consumer checks on
 the exact downloadable tagged module graph with `GOWORK=off`; local replacement
 success is useful development evidence but is not publication evidence.
+
+## Streaming retry retraction (unreleased)
+
+Model stream consumers and interceptors must handle `model.StreamRetry` by
+clearing both semantic accumulators and restarting part indices from zero.
+This control event is runtime-owned and its callback may abort the invocation.
+Agent stream consumers must handle `agent.StreamRetry` using UTF-8 byte suffix
+counts, and `agent.StreamRecovered` to clear status without altering text.
+Do not use byte counts as JavaScript UTF-16 string offsets. A UI bridge can
+validate/truncate UTF-8 on its backend and send authoritative text prefixes.
+Consumers unable to retract progress must return an error for retry events.
+
+Coordinate SDK publication and consumer version updates before releasing the
+new runtime behavior. Existing published SDK v0.2.16 does not contain these
+contracts; validate the pending changes together with a local Go workspace.
+
+For the SendMessage lifecycle, these Agent stream events are consumed internally.
+Public clients receive coalesced RuntimeUpdate progress and authoritative Turn
+snapshots through Control.Watch. A retry flushes preceding progress, retracts
+only the affected round and publishes ExecutionBlock.Retry. Output recovery or
+StreamRecovered clears that state. No public Run/Stream method is restored.

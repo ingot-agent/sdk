@@ -5,6 +5,7 @@ package model
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/ingot-agent/sdk/content"
 	"github.com/ingot-agent/sdk/pipeline"
@@ -63,6 +64,46 @@ type Message struct {
 	Name       string
 	ToolCallID string
 	ToolCalls  []tool.Call
+
+	// Replay optionally retains provider continuation data outside visible Content.
+	// A nil value means no continuation data is available.
+	Replay *ReplayState
+}
+
+// ReplayState carries opaque provider continuation data associated with a
+// message, such as signed reasoning or an ordered provider output sequence.
+// It is not user-visible content. Format is a versioned, provider-owned format
+// identifier; Provider and Model identify the originating request selection.
+// Data is interpreted only by an adapter that recognizes that format and scope.
+// Other adapters must ignore it and use the ordinary Message fields.
+//
+// History stores and message transforms must preserve it byte-for-byte for
+// unchanged messages. Transforms that change a message should clear Replay;
+// adapters must also verify that replay still agrees with the ordinary fields
+// before using it. If those fields were edited, adapters must use them instead
+// of restoring stale replay content. Summaries are new messages and must not
+// inherit Replay.
+//
+// Like other message aggregates, inputs are immutable and returned state belongs
+// to the caller. Copy Data when retaining or handing state to another owner.
+type ReplayState struct {
+	Format   string
+	Provider string
+	Model    string
+	Data     []byte
+}
+
+// Clone returns an independent copy of the state, preserving nil. It is safe
+// for concurrent calls while the receiver and its Data are not being modified.
+func (r *ReplayState) Clone() *ReplayState {
+	if r == nil {
+		return nil
+	}
+	result := *r
+	if r.Data != nil {
+		result.Data = append([]byte{}, r.Data...)
+	}
+	return &result
 }
 
 // Request is one model invocation. Provider chooses a named provider instance;
@@ -161,13 +202,19 @@ type RequestResolver interface {
 // Interceptor wraps a complete model request.
 type Interceptor = pipeline.Interceptor[Request, Response]
 
-// StreamEventKind identifies a content part lifecycle event.
+// StreamEventKind identifies a content part lifecycle or retry control event.
 type StreamEventKind uint8
 
 const (
 	StreamPartStart StreamEventKind = iota + 1
 	StreamPartDelta
 	StreamPartEnd
+	// StreamRetry retracts all provisional content and reasoning from the
+	// current invocation before another provider attempt. Both part sequences
+	// restart at zero. It is emitted by the runtime, never by provider adapters.
+	// Consumers and interceptors must discard the previous attempt's state or
+	// return an error to stop the retry. Earlier invocations are unaffected.
+	StreamRetry
 )
 
 // StreamSemantic describes the purpose of a streamed part independently of
@@ -202,6 +249,13 @@ type StreamEvent struct {
 
 	TextDelta string
 	DataDelta []byte
+
+	// Attempt and RetryDelay are set only on StreamRetry. Attempt is the next
+	// provider attempt (at least 2, including the original request); RetryDelay
+	// is the nonnegative planned wait. Cancellation can prevent that attempt.
+	// All part and content fields must be zero on a retry event.
+	Attempt    int
+	RetryDelay time.Duration
 }
 
 // StreamHandler receives events synchronously in delivery order. Returning an

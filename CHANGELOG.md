@@ -15,6 +15,9 @@ graph. The Go language version declared by these tags is Go 1.24.0.
 
 ## Unreleased
 
+- Merged retry/replay contracts with SendMessage. ExecutionBlock.Retry exposes
+  per-round retry status through State/Watch without restoring Run/Stream.
+
 - Replaced public Agent Run/Stream with asynchronous SendMessage and Control;
   Turn now carries ordered Inputs with per-submission paths/media. Added bounded
   runtime snapshots and ordered input/round progress using existing identities.
@@ -22,6 +25,18 @@ graph. The Go language version declared by these tags is Go 1.24.0.
   progress; Reset recovers lagging watchers and State remains the full snapshot.
 - Store.Append now accepts an atomic, contiguous variadic batch; empty batches
   are no-ops. File notice and actual user message share a single commit.
+
+- Add optional `model.Message.Replay` and `model.ReplayState.Clone` for opaque,
+  scoped provider continuation state. Stores and message transforms must retain
+  its bytes independently of visible content; adapters validate scope and
+  agreement with ordinary fields before replaying it. Edited messages use their
+  ordinary fields instead of stale replay content.
+
+- Added runtime-only `model.StreamRetry` and Agent `StreamRetry` /
+  `StreamRecovered` control events. Streaming consumers and interceptors must
+  retract only the failed model attempt's provisional state before replay and
+  preserve prior rounds. This changes observable stream semantics; publish the
+  SDK and update participating runtimes and consumers together.
 
 - Added `agent.PluginInput` data with writer and projector capability
   interfaces. Validation, versioned record handling, and XML formatting moved
