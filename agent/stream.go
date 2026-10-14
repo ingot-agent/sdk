@@ -1,9 +1,6 @@
 package agent
 
-import (
-	"context"
-	"time"
-)
+import "time"
 
 // StreamEventKind identifies transient output or a retry control event.
 type StreamEventKind uint8
@@ -50,26 +47,3 @@ type StreamEvent struct {
 // including an invocation that returns an error. Already completed side effects
 // are not rolled back.
 type StreamHandler func(StreamEvent) error
-
-// StreamingRuntime independently exposes incremental agent output. It does not
-// require Runtime. Implementations supporting both share turn execution and
-// interceptors; only the model invocation and incremental observation differ.
-// Turns for one session are serialized with Run and History.Load; different
-// sessions may run concurrently. Input aggregates are immutable.
-//
-// Stream returns an Execution with a canonical, caller-owned Result only when
-// its error is nil. Once the turn lifecycle starts, Outcome remains valid on
-// failure or cancellation. The Result can differ from concatenated deltas.
-// Reasoning need not be present and is not persisted merely because it was
-// streamed. Retry controls are included; tool and turn lifecycle events are
-// excluded. Implementations may
-// complete successfully without delivering any StreamEvent.
-//
-// A nil handler returns ErrNilStreamHandler. Implementations may transparently
-// use a non-streaming model path when streaming is unavailable, provided their
-// execution contract permits it. Cancellation and deadlines stop future work
-// without rolling back completed durable or external effects, and do not imply
-// that retrying the turn is safe.
-type StreamingRuntime interface {
-	Stream(context.Context, Turn, StreamHandler) (Execution, error)
-}

@@ -6,6 +6,39 @@ target versions. Package comments and their external-package tests are the
 authoritative contract reference; this guide explains integration work across
 those packages.
 
+## SendMessage and Round-boundary input (Unreleased)
+
+This is a breaking local-branch change; published SDK pins do not contain it.
+Compose the matching local SDK, Agent, WebUI and Store until coordinated releases
+are available. Historical Run/Stream examples below describe their named versions.
+
+- Replace public Agent Run/Stream calls with `SendMessage(ctx, MessageRequest)`.
+  Do not construct Turn to start work or wait on SendMessage for a result.
+- Replace Turn.Input/Attachments with Turn.Inputs. Requests submit exactly one
+  Input; the runtime creates and extends the lifecycle. Use CloneInput/CloneTurn
+  when retaining values. TurnStarted is the start snapshot, not the final list.
+- Wrap media in InputAttachment.Media; use Path for local file notices. WebUI no
+  longer writes file notices through PluginInputWriter. Independent plugin
+  writers/projectors and old plugin-input records remain supported.
+- Implement variadic Store.Append as one atomic transaction with consecutive
+  entries and one activity update. Empty append is a no-op. An error must not
+  cause automatic replay; commit status can be unknown.
+- Inject agent.Control to query State/Watch and final Execution, and use its
+  pause/cancel/Stop operations. Reuse RequestID for uncertain admission retries;
+  existing receipt IDs identify submissions and TurnID identifies the lifecycle.
+- State returns a full RuntimeState. Watch returns an ordered RuntimeUpdate:
+  upsert affected Messages/Turns/Queues, append Progress to its existing receipt
+  and RoundIndex, or replace state on Reset. Pass the last received Revision to
+  Watch; reject updates already covered by a newer snapshot. Progress is batched
+  and flushed at structural boundaries, not one notification per provider delta.
+- The default Agent additionally requires session.Manager for pre-admission
+  existence/archive checks. Its private child-session control rejects direct
+  submissions to child sessions. Execution still rechecks storage restrictions.
+- Accept queued inputs only after a complete tool group; max rounds and model
+  selection cover the full lifecycle. Ordinary input never answers a blocked
+  interaction. Create inline followups only after the source lifecycle and queue
+  are idle.
+
 ## Provider Continuation State (Unreleased)
 
 `model.Message` now includes optional `Replay *model.ReplayState`. It separates
@@ -44,8 +77,9 @@ projector; without it, non-agent records are ignored. The default Prompt renders
 the explanation as an ordinary contributor block and includes no built-in notice.
 No Session schema migration or new `agent.message` version is needed.
 
-The Agent reads inputs during history loading at Turn start, then keeps that
-context for subsequent rounds. Later appends are read in a future Turn.
+The Agent reads plugin inputs during history loading at Turn start and when
+admitting a new user-input batch at a Round boundary. Independent plugin appends
+do not themselves trigger a history reload or wake execution.
 It defers inputs inside unfinished
 tool rounds until completion or recovery. User-input association remains owned
 by the calling plugin through its own invocation constraints and Store Appends.
@@ -514,3 +548,9 @@ Consumers unable to retract progress must return an error for retry events.
 Coordinate SDK publication and consumer version updates before releasing the
 new runtime behavior. Existing published SDK v0.2.16 does not contain these
 contracts; validate the pending changes together with a local Go workspace.
+
+For the SendMessage lifecycle, these Agent stream events are consumed internally.
+Public clients receive coalesced RuntimeUpdate progress and authoritative Turn
+snapshots through Control.Watch. A retry flushes preceding progress, retracts
+only the affected round and publishes ExecutionBlock.Retry. Output recovery or
+StreamRecovered clears that state. No public Run/Stream method is restored.

@@ -367,31 +367,48 @@ The model capability metadata APIs introduced in v0.2
 operations remain the capability boundary. The Agent-level
 `ErrStreamingUnsupported` sentinel has likewise been removed.
 
-## Agent output streaming
+## Message submission and execution (Unreleased)
 
-`agent.StreamingRuntime` is independent of `agent.Runtime`. `Stream(ctx, turn,
-handler)` returns an `agent.Execution` while synchronously delivering
-`StreamReasoningDelta` (provider-explicit thinking) and `StreamOutputDelta`
-(user-visible assistant text). Both may occur in every model round, including
-rounds that invoke tools. Concatenated deltas are not the final result or session
-history. Tool, lifecycle, and interaction events are not part of this contract.
+`agent.Runtime.SendMessage(ctx, agent.MessageRequest) error` replaces the public
+Agent Run/Stream entry points. A request carries SessionID, optional RootSessionID
+and RequestID, and one `Input{Text, Attachments}`. Returning nil confirms admission;
+it does not confirm persistence or completion. The request context controls
+admission only; Stop and runtime cleanup own execution cancellation.
 
-Handlers run in order, without concurrent calls within a turn. Handler errors
-abort the turn and are returned unchanged; cancellation propagates to model and
-tool calls without rolling back completed effects. Nil handlers return
-`agent.ErrNilStreamHandler`. An agent may use model completion when streaming is
-unavailable, and a successful stream may deliver zero events. Any event already
-delivered is transient progress rather than a canonical result if Stream fails.
+A Turn is a lifecycle with ordered `Inputs []Input`. Each Input owns its
+`[]InputAttachment`: Path produces an ordinary user file notice, Media produces
+standard model media content, and both may be supplied for a local image. The
+notice and actual user message are appended together through
+`Store.Append(ctx, sessionID, entries...)`. This atomic, contiguous batch uses
+existing message records; it adds no file field to provider messages or new IDs.
 
-## Execution outcome (v0.2.5)
+The runtime accepts all pending inputs from a frozen snapshot after a complete
+Round, including all tool results and blocked interactions. They enter the next
+model call of the same Turn. Late arrivals wait for another boundary. No remaining
+round budget means pending inputs wait for the next Turn. An attachment failure
+marks that submission failed and pauses the suffix, while a prepared prefix and
+the current execution continue. Resume does not retry the failed submission.
 
-The former v0.4 design milestone was implemented in module tag v0.2.5.
+`agent.Control` exposes authoritative State snapshots and ordered Watch updates, cached history,
+pause/resume, pending removal and Stop. Multiple submission receipts can share
+one existing TurnID. TurnState retains ordered input/round blocks and final
+`agent.Execution`; successful execution contains Result, while Outcome describes
+termination and failures. Notifications are advisory and disconnects do not stop
+execution. Queues and retained outcomes are process-local, not durable resume.
 
-`agent.Runtime.Run` and `agent.StreamingRuntime.Stream` return an
-`agent.Execution`. A successful execution contains a canonical `Result`; once
-the Turn lifecycle starts, failed and canceled executions still contain an
-authoritative `Outcome` with status, duration, and failure stage.
-A zero `Execution` means validation failed before the lifecycle was established.
+Watch returns RuntimeUpdate: structural updates upsert affected records,
+TurnProgress appends coalesced increments using existing submission/Turn/round
+coordinates, and Reset supplies full state when starting or catching up beyond
+retention. State snapshots and increments share Revision; ignore increments
+already covered by a snapshot. Watch cancellation never cancels execution.
+
+Streaming remains an internal delivery choice. StreamEvent distinguishes
+reasoning and output deltas, while canonical messages and Result determine the
+answer. Tool, interaction and lifecycle observations retain their existing scope.
+A Turn keeps one configuration snapshot, round budget, cancellation scope and
+interceptor lifecycle. Model streaming contracts remain unchanged.
+
+
 
 Token usage belongs to Sessions: `Metadata.TotalToken` is separate
 from `Metadata.Meta`, and `TokenUsageStore` atomically adds a reported increment
@@ -463,3 +480,9 @@ independent of presentation and applies to replaceable provisional streams in
 interactive, batch and delegated Agent implementations. Model runtimes and
 remote execution bridges can implement the same semantics. Retry policy,
 provider error classification and persistence remain outside the SDK.
+
+For the SendMessage lifecycle, these Agent stream events are consumed internally.
+Public clients receive coalesced RuntimeUpdate progress and authoritative Turn
+snapshots through Control.Watch. A retry flushes preceding progress, retracts
+only the affected round and publishes ExecutionBlock.Retry. Output recovery or
+StreamRecovered clears that state. No public Run/Stream method is restored.

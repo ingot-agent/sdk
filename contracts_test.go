@@ -115,8 +115,8 @@ type store struct{}
 func (store) Create(context.Context, session.CreateRequest) (session.Metadata, error) {
 	return session.Metadata{}, nil
 }
-func (store) Append(context.Context, session.ID, session.Entry) error   { return nil }
-func (store) Load(context.Context, session.ID) ([]session.Entry, error) { return nil, nil }
+func (store) Append(context.Context, session.ID, ...session.Entry) error { return nil }
+func (store) Load(context.Context, session.ID) ([]session.Entry, error)  { return nil, nil }
 func (store) Get(context.Context, session.ID) (session.Metadata, error) {
 	return session.Metadata{}, nil
 }
@@ -283,9 +283,7 @@ var _ = operation.Request{
 
 type agentRuntime struct{}
 
-func (agentRuntime) Run(context.Context, agent.Turn) (agent.Execution, error) {
-	return agent.Execution{}, nil
-}
+func (agentRuntime) SendMessage(context.Context, agent.MessageRequest) error { return nil }
 
 var _ agent.Runtime = agentRuntime{}
 

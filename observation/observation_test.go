@@ -40,7 +40,7 @@ func TestPublicContractsAndCorrelation(t *testing.T) {
 
 	event := observation.Event{
 		Time: time.Unix(1, 2), Sequence: 1, Correlation: want,
-		Detail: observation.TurnStarted{Turn: agent.Turn{SessionID: "session-1", Input: "hello"}},
+		Detail: observation.TurnStarted{Turn: agent.Turn{SessionID: "session-1", Inputs: []agent.Input{{Text: "hello"}}}},
 	}
 	if event.Sequence != 1 || event.Detail == nil {
 		t.Fatalf("event=%#v", event)

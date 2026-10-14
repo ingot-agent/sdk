@@ -15,6 +15,17 @@ graph. The Go language version declared by these tags is Go 1.24.0.
 
 ## Unreleased
 
+- Merged retry/replay contracts with SendMessage. ExecutionBlock.Retry exposes
+  per-round retry status through State/Watch without restoring Run/Stream.
+
+- Replaced public Agent Run/Stream with asynchronous SendMessage and Control;
+  Turn now carries ordered Inputs with per-submission paths/media. Added bounded
+  runtime snapshots and ordered input/round progress using existing identities.
+- Control.Watch returns revision-ordered RuntimeUpdate patches or coalesced
+  progress; Reset recovers lagging watchers and State remains the full snapshot.
+- Store.Append now accepts an atomic, contiguous variadic batch; empty batches
+  are no-ops. File notice and actual user message share a single commit.
+
 - Add optional `model.Message.Replay` and `model.ReplayState.Clone` for opaque,
   scoped provider continuation state. Stores and message transforms must retain
   its bytes independently of visible content; adapters validate scope and
