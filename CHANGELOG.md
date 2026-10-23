@@ -15,6 +15,14 @@ graph. The Go language version declared by these tags is Go 1.24.0.
 
 ## Unreleased
 
+- Add the explicit `model.ReasoningEffortMax` (`max`) and
+  `model.ReasoningEffortUltra` (`ultra`) reasoning efforts above `xhigh`.
+  `Valid` accepts both, so provider adapters can declare them for models whose
+  upstream API supports a larger effort range. The addition is purely additive:
+  existing effort values, `ProviderDefault` and the empty request-inherit value
+  keep their meaning, and consumers need no migration beyond selecting a version
+  that contains the new constants.
+
 - Merged retry/replay contracts with SendMessage. ExecutionBlock.Retry exposes
   per-round retry status through State/Watch without restoring Run/Stream.
 
