@@ -257,6 +257,10 @@ even after replacement. Fixed configurations use the same source contract.
 `model.ReasoningEffortProviderDefault` distinguishes a provider-default
 reasoning choice from an empty effort that inherits the model runtime default.
 The model runtime converts it to an empty effort before invoking a provider.
+Providers declare the explicit efforts each model accepts. `Valid` reports
+whether a value is one of the explicit efforts the SDK defines: `none`,
+`minimal`, `low`, `medium`, `high`, `xhigh`, `max` and `ultra`.
+`providerDefault` and the empty value are request controls, not capabilities.
 
 ## Contract conventions
 

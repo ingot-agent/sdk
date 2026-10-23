@@ -34,6 +34,8 @@ const (
 	ReasoningEffortMedium          ReasoningEffort = "medium"
 	ReasoningEffortHigh            ReasoningEffort = "high"
 	ReasoningEffortXHigh           ReasoningEffort = "xhigh"
+	ReasoningEffortMax             ReasoningEffort = "max"
+	ReasoningEffortUltra           ReasoningEffort = "ultra"
 	ReasoningEffortProviderDefault ReasoningEffort = "providerDefault"
 )
 
@@ -41,7 +43,7 @@ const (
 // The empty value and ProviderDefault are request controls, not model capabilities.
 func (e ReasoningEffort) Valid() bool {
 	switch e {
-	case ReasoningEffortNone, ReasoningEffortMinimal, ReasoningEffortLow, ReasoningEffortMedium, ReasoningEffortHigh, ReasoningEffortXHigh:
+	case ReasoningEffortNone, ReasoningEffortMinimal, ReasoningEffortLow, ReasoningEffortMedium, ReasoningEffortHigh, ReasoningEffortXHigh, ReasoningEffortMax, ReasoningEffortUltra:
 		return true
 	default:
 		return false

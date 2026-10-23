@@ -29,6 +29,31 @@ func (f resolverFunc) ResolveRequest(ctx context.Context, request model.Request)
 	return f(ctx, request)
 }
 
+func TestReasoningEffortMaxIsExplicit(t *testing.T) {
+	t.Parallel()
+	explicit := []model.ReasoningEffort{
+		model.ReasoningEffortNone,
+		model.ReasoningEffortMinimal,
+		model.ReasoningEffortLow,
+		model.ReasoningEffortMedium,
+		model.ReasoningEffortHigh,
+		model.ReasoningEffortXHigh,
+		model.ReasoningEffortMax,
+		model.ReasoningEffortUltra,
+	}
+	for _, effort := range explicit {
+		if !effort.Valid() {
+			t.Fatalf("effort %q must be valid", effort)
+		}
+	}
+	if model.ReasoningEffortMax != "max" || model.ReasoningEffortUltra != "ultra" {
+		t.Fatalf("ReasoningEffortMax = %q, ReasoningEffortUltra = %q", model.ReasoningEffortMax, model.ReasoningEffortUltra)
+	}
+	if model.ReasoningEffortProviderDefault.Valid() || model.ReasoningEffort("").Valid() {
+		t.Fatal("providerDefault and empty effort are request controls, not capabilities")
+	}
+}
+
 func TestPublicRequestResolverContract(t *testing.T) {
 	t.Parallel()
 	var resolver model.RequestResolver = resolverFunc(func(_ context.Context, request model.Request) (model.Request, error) {
