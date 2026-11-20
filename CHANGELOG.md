@@ -15,6 +15,16 @@ graph. The Go language version declared by these tags is Go 1.24.0.
 
 ## Unreleased
 
+- Add the `logging` contract: portable `Level` values, immutable structured
+  `Attr`/`Value` pairs (including nested groups, durations, instants and
+  errors), and a `Logger` interface with `Enabled`, per-level emission,
+  `With`-retained attributes and `Discard`. The contract fixes vocabulary and
+  producer obligations only; filtering thresholds, formatting, destinations,
+  retention and rotation remain implementation policy. Implementations must
+  attach `observation.Correlation` from the record's context, so producers pass
+  the operation context instead of repeating session and turn attributes.
+  Consumers need the release containing the new package before importing it.
+
 - Add the explicit `model.ReasoningEffortMax` (`max`) and
   `model.ReasoningEffortUltra` (`ultra`) reasoning efforts above `xhigh`.
   `Valid` accepts both, so provider adapters can declare them for models whose

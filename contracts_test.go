@@ -14,6 +14,7 @@ import (
 	"github.com/ingot-agent/sdk/execution"
 	"github.com/ingot-agent/sdk/httpx"
 	"github.com/ingot-agent/sdk/interaction"
+	"github.com/ingot-agent/sdk/logging"
 	"github.com/ingot-agent/sdk/model"
 	"github.com/ingot-agent/sdk/observation"
 	"github.com/ingot-agent/sdk/operation"
@@ -404,3 +405,45 @@ func (toolEnvelope) Invoke(_ context.Context, invocation tool.Invocation) (tool.
 }
 
 var _ tool.Tool = toolEnvelope{}
+
+// logSink tests that an independent implementation can satisfy Logger with the
+// public constructors only: no SDK helper, concrete logger or global state is
+// required.
+type logSink struct {
+	level  logging.Level
+	attrs  []logging.Attr
+	output []logging.Attr
+}
+
+func (s *logSink) Enabled(level logging.Level) bool { return level >= s.level }
+
+func (s *logSink) Debug(_ context.Context, _ string, attrs ...logging.Attr) {
+	s.emit(logging.LevelDebug, attrs)
+}
+
+func (s *logSink) Info(_ context.Context, _ string, attrs ...logging.Attr) {
+	s.emit(logging.LevelInfo, attrs)
+}
+
+func (s *logSink) Warn(_ context.Context, _ string, attrs ...logging.Attr) {
+	s.emit(logging.LevelWarn, attrs)
+}
+
+func (s *logSink) Error(_ context.Context, _ string, attrs ...logging.Attr) {
+	s.emit(logging.LevelError, attrs)
+}
+
+func (s *logSink) With(attrs ...logging.Attr) logging.Logger {
+	clone := *s
+	clone.attrs = append(append([]logging.Attr(nil), s.attrs...), attrs...)
+	return &clone
+}
+
+func (s *logSink) emit(level logging.Level, attrs []logging.Attr) {
+	if !s.Enabled(level) {
+		return
+	}
+	s.output = append(s.output, logging.Group("record", append(s.attrs, attrs...)...))
+}
+
+var _ logging.Logger = (*logSink)(nil)
