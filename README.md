@@ -103,6 +103,7 @@ it uses.
 | `observation` | Passive, correlated Turn/Round/Model/Tool execution facts. |
 | `interaction` | Presentation-neutral structured effects between plugins and a host environment. |
 | `operation` | Externally invocable, transport-neutral plugin operations. |
+| `logging` | Leveled, structured log emission shared by producers and interchangeable logging implementations. |
 
 `interaction` describes semantic requests, events, and state. It deliberately
 does not define widgets, layouts, terminal behavior, or rendering.
