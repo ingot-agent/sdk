@@ -193,7 +193,7 @@ graph. Milestone headings describe contract evolution, not published module tags
 
 ## Using the standard SDK
 
-Requires Go 1.24 or newer.
+Requires Go 1.26 or newer.
 
 Read the [versioned changelog](CHANGELOG.md) and
 [migration guide](docs/MIGRATIONS.md) before changing dependency versions. The

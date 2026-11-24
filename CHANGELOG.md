@@ -11,9 +11,18 @@ milestones are not module versions.
 The SDK is still `v0`: incompatible changes have occurred in patch releases.
 Read all intervening entries and the [migration guide](docs/MIGRATIONS.md), pin
 the version in each consuming module, and test the complete selected module
-graph. The Go language version declared by these tags is Go 1.24.0.
+graph. Tags through `v0.2.21` declare Go 1.24.0; the `Unreleased` entry below
+raises the floor to Go 1.26.0.
 
 ## Unreleased
+
+- Raise the declared Go language version from 1.24.0 to 1.26.0. Go 1.24 and
+  Go 1.25 are both out of support, so the previous floor advertised toolchains
+  that no longer receive security fixes. This is a build requirement, not an API
+  change: no exported identifier moved or changed, and the SDK still compiles
+  without a `toolchain` directive. Consumers must build with a Go 1.26.0 or newer
+  toolchain, which is why the change ships inside the unreleased `v0` line
+  rather than as an additive patch to an existing tag.
 
 - Add the `logging` contract: portable `Level` values, immutable structured
   `Attr`/`Value` pairs (including nested groups, durations, instants and
